@@ -121,6 +121,16 @@ class Inquiry(db.Model):
     deletion_reason = db.Column(db.String(50), nullable=True)
 
 
+class Complaint(db.Model):
+    __tablename__ = 'complaints'
+    id = db.Column(db.Integer, primary_key=True)
+    phone_number = db.Column(db.String(20), nullable=False)
+    complaint_text = db.Column(db.Text, nullable=False)
+    status = db.Column(db.Enum(Status), default=Status.PENDING)  
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    comes_from = db.Column(db.String(100))
+
+
 class Subscription(db.Model):
     __tablename__ = "subscriptions"
     id = db.Column(db.Integer, primary_key=True)

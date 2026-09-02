@@ -18,6 +18,8 @@ class UserService:
       except Exception as e:
         db.session.rollback()
         return None, str(e)
+
+      
     #this function authenticates a user by checking the provided name and password against the database
     @staticmethod
     def authenticate_user(name, password):
@@ -31,6 +33,9 @@ class UserService:
                 return None, "اسم المستخدم أو كلمة المرور غير صحيحة"
         except Exception as e:
             return None, str(e)
+
+
+        
     #this function logs out the current user
     @staticmethod
     def logout_user():
@@ -43,6 +48,8 @@ class UserService:
             return current_user
         else:
             return None
+
+        
     #this function retrieves all users from the database    
     @staticmethod
     def get_all_users():
