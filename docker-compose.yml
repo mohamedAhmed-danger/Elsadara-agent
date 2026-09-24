@@ -1,0 +1,125 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: sadara-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  qdrant:
+    # لازم نفس إصدار الـ Qdrant اللي شغال عندك local (شوفه من: curl http://localhost:6333)
+    image: qdrant/qdrant:v1.12.4
+    container_name: sadara-qdrant
+    restart: always
+    volumes:
+      - qdrantdata:/qdrant/storage
+    networks:
+      - internal
+
+  web:
+    build: .
+    container_name: sadara-labs-agent
+    restart: always
+    ports:
+      - "127.0.0.1:6152:4500"      # nginx بس هو اللي يوصله
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance
+      - ./static/uploads:/app/static/uploads
+      - ./credentials.json:/app/credentials.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      waha1:
+        condition: service_started
+    networks:
+      - internal
+
+  waha1:
+    image: devlikeapro/waha
+    container_name: sadara-waha1
+    restart: always
+    shm_size: '2gb'
+    ports:
+      - "127.0.0.1:3014:3000"     
+    environment:
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME}
+      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD}
+      - WAHA_LOG_LEVEL=warn
+      - WAHA_API_KEY=${WAHA_API_KEY}
+      - WH_URL=http://web:4500/webhook/waha
+      - WH_EVENTS=message.upsert,message.any
+      - WAHA_SESSION_STORE=FILE
+      - WAHA_SESSIONS_DIR=/app/.sessions
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+      - PUPPETEER_ARGS=--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu,--no-zygote,--disable-extensions
+      - WAHA_SESSION_CONFIG_IGNORE_STATUS=true
+      - WAHA_SESSION_CONFIG_IGNORE_BROADCAST=true
+      - WAHA_BASE_URL=http://waha1:3000
+    volumes:
+      - ./waha_sessions1:/app/.sessions
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    networks:
+      - internal
+
+  # لو محتاج أكتر من رقم واتساب: انسخ بلوك waha1 كامل وغيّر بس:
+  #   اسم الـ service والـ container_name (waha2)
+  #   البورت (127.0.0.1:3006:3000)
+  #   WAHA_BASE_URL=http://waha2:3000
+  #   فولدر الجلسات (./waha_sessions2)
+  # وضيفه في depends_on بتاع web.
+
+  # ── اختياري: شيل التعليق لو المشروع بيستخدمهم فعلًا ─────────────────────────
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: sadara-redis
+  #   restart: always
+  #   command: ["redis-server", "--appendonly", "yes"]
+  #   volumes:
+  #     - redisdata:/data
+  #   networks:
+  #     - internal
+  #
+  # redis_worker:
+  #   build: .
+  #   container_name: sadara-redis-worker
+  #   restart: always
+  #   command: ["python", "-m", "services.redis_worker"]   # عدّل المسار حسب مشروعك
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./static/uploads:/app/static/uploads
+  #   depends_on:
+  #     - db
+  #     - redis
+  #   networks:
+  #     - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  mysqldata:
+  qdrantdata:
+  # redisdata:
