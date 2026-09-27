@@ -98,8 +98,8 @@ class Client(db.Model):
     sender_id = db.Column(db.String(100), nullable=False) # Sender ID received from Facebook or WAHA request
     page_id = db.Column(db.String(100), nullable=False) # Foreign Key linking to Page
     platform_id = db.Column(db.Integer, nullable=False) # Foreign Key linking to Platform
-    summary = db.Column(db.String(200), nullable=True) # Chat summary (used for agent memory)
-    last_bot_reply = db.Column(db.String(200), nullable=True) # Last bot reply (used for agent memory)
+    summary = db.Column(db.Text, nullable=True) # Chat summary (used for agent memory)
+    last_bot_reply = db.Column(db.Text, nullable=True) # Last bot reply (used for agent memory)
     chat_history = db.Column(db.JSON, nullable=False, default=list) # Chat history containing the last 7 pairs of messages and timestamps (used for agent memory)
 
 

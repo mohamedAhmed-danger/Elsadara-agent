@@ -21,8 +21,8 @@ def intent_node(state: AgentState) -> Dict[str, Any]:
     Flow:
         Get Context
         → Load History
-        → Build Prompt
-        → Gemini
+        → Build Messages (static system prompt + context in HumanMessage)
+        → Gemini (structured output)
         → Return Intent
     """
 
@@ -48,29 +48,23 @@ def intent_node(state: AgentState) -> Dict[str, Any]:
         len(history),
     )
 
-    # 3. Build the LLM prompt
-    system_prompt = f"""
-{INTENT_SYSTEM_PROMPT}
-
-====================
-CONTEXT INFORMATION
-====================
-
-Summary:
+    # 3. Build the LLM messages
+    # System prompt is static (better for caching);
+    # the changing context goes in the HumanMessage.
+    context_block = f"""Summary:
 {summary or "None"}
 
 Last Bot Message:
 {last_bot_message or "None"}
 
-====================
-RECENT EXCHANGES
-====================
-{formatted_history or "None"}
-"""
+Recent Exchanges:
+{formatted_history or "None"}"""
 
     messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_message),
+        SystemMessage(content=INTENT_SYSTEM_PROMPT),
+        HumanMessage(
+            content=f"{context_block}\n\nCURRENT USER MESSAGE:\n{user_message}"
+        ),
     ]
 
     # 4. Classify intent with structured output
@@ -83,7 +77,7 @@ RECENT EXCHANGES
         )
 
         result = structured_llm.invoke(messages)
-        logger.warning("RAW GEMINI RESPONSE: %s", result.get("raw"))
+        logger.debug("RAW GEMINI RESPONSE: %s", result.get("raw"))
 
         parsed: Optional[IntentResponse] = result.get("parsed")
 
@@ -117,5 +111,6 @@ RECENT EXCHANGES
         return {
             "intent": IntentType.DIRECT,
             "refined_queries": [],
+            "is_bundle_query": False,
             "intent_usage": None,
         }

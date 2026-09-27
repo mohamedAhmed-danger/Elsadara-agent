@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
 
 
@@ -13,23 +13,20 @@ class IntentType(str, Enum):
 
 class RefinedQuery(BaseModel):
     query: str = Field(
-        ...,
-        description="Refined search query extracted from user message or OCR text, representing a distinct medical test or service."
+        ..., min_length=1,
+        description="Concise standardized English description of ONE distinct lab test, panel, or bundle and what it measures."
     )
-
     aliases: List[str] = Field(
-        default_factory=list,
-        description="Alternative names or synonyms for the laboratory service in both Arabic and English."
+        ..., min_length=1,
+        description="Alternative names, abbreviations, Arabic and Franco-Arab terms for the exact same test."
     )
-
     keywords: List[str] = Field(
-        default_factory=list,
-        description="Important domain keywords and medical terms related to the test."
+        ..., min_length=2, max_length=5,
+        description="2-5 distinctive English search terms for the test."
     )
-
-    description: Optional[str] = Field(
-        default="",
-        description="Optional brief summary or context of the laboratory service."
+    description: str = Field(
+        ..., min_length=1,
+        description="Short medically accurate English description of the test purpose."
     )
 
 
@@ -38,13 +35,11 @@ class IntentResponse(BaseModel):
         ...,
         description="The main intent classification of the user's message."
     )
-    
     refined_queries: List[RefinedQuery] = Field(
         ...,
-        description="REQUIRED LIST: MUST contain one RefinedQuery entry for EVERY lab test or medical analysis mentioned. If no tests are mentioned, return an empty list [], but YOU MUST INCLUDE THIS KEY."
+        description="One RefinedQuery per requested lab test/panel/bundle. Empty list [] if no lab retrieval is needed. The key must always be included."
     )
-    
     is_bundle_query: bool = Field(
-        default=False, 
-        description="Set to True ONLY if the user is explicitly asking about bundles, checkup offers, or packages."
+        ...,
+        description="True ONLY if the user is explicitly asking about bundles, checkup offers, or packages."
     )
