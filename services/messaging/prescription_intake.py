@@ -47,7 +47,8 @@ def _looks_like_valid_image(image_bytes: bytes) -> bool:
 
 def _save_prescription_image(image_bytes: bytes, sender_id: str) -> Tuple[str, str]:
     """Writes image bytes to disk with their real extension and returns (filename, absolute_path)."""
-    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # Navigate up 3 levels: services/messaging/prescription_intake.py -> services/messaging -> services -> project root
+    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     uploads_dir = os.path.join(project_dir, "static", "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
 
