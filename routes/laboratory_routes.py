@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
-from services.laboratory_service import LaboratoryService
+from services.domain.laboratory_service import LaboratoryService
 
 laboratory_bp = Blueprint('laboratory', __name__, url_prefix='/laboratories')
 

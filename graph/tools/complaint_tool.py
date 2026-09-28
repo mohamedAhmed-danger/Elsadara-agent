@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from langchain_core.tools import tool
-from services.complaint_service import ComplaintService
+from services.domain.complaint_service import ComplaintService
 
 logger = logging.getLogger(__name__)
 

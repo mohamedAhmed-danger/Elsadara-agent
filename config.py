@@ -43,4 +43,5 @@ class Config:
     FEEDBACK_BASE_URL = os.getenv("FEEDBACK_BASE_URL")
     GMAIL_CREDENTIALS_PATH = os.getenv("GMAIL_CREDENTIALS_PATH")
     WEBHOOK_THREAD_POOL_SIZE = int(os.getenv("WEBHOOK_THREAD_POOL_SIZE", "8"))
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     

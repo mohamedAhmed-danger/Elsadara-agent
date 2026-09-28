@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from services.bundle_service import BundleService
+from services.domain.bundle_service import BundleService
 
 bundle_bp = Blueprint("bundle", __name__, url_prefix="/bundles")
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, send_file
 from flask_login import login_required
 from models.models import Status
-from services.booking_service import BookingService
+from services.domain.booking_service import BookingService
 
 bookings_bp = Blueprint('bookings', __name__, url_prefix='/bookings')
 

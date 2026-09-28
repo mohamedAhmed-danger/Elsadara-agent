@@ -3,8 +3,8 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from models.models import db, LabService, Laboratory
-from services.vector_service import upsert_test_vector, delete_test_vector
-from services.generation_service import regenerate_test, generate_test
+from services.shared.vector_service import upsert_test_vector, delete_test_vector
+from services.shared.generation_service import regenerate_test, generate_test
 from schemas.generation import TestGenerationResult
 
 logger = logging.getLogger(__name__)
@@ -300,7 +300,7 @@ class TestsService:
     # Retrieve all registered laboratories ordered alphabetically by name
     def get_all_laboratories(self):
         """All laboratories, ordered alphabetically by name."""
-        from services.laboratory_service import LaboratoryService
+        from services.domain.laboratory_service import LaboratoryService
         return LaboratoryService.get_laboratories_ordered_by_name()
 
     # Compile pagination, services list, and laboratories for dashboard view rendering

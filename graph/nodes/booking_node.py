@@ -8,9 +8,9 @@ from graph.state import AgentState
 from graph.tools.visit_tool import save_visit_tool
 from llm.llm import get_gemini
 from schemas.booking import VisitReply
-from services.client_service import ClientService
-from services.laboratory_service import LaboratoryService
-from services.bundle_service import BundleService
+from services.messaging.client_service import ClientService
+from services.domain.laboratory_service import LaboratoryService
+from services.domain.bundle_service import BundleService
 from utils.history_utils import get_chat_history
 from utils.llm_utils import extract_token_usage
 from utils.text_utils import detect_language_fallback, get_platform_name

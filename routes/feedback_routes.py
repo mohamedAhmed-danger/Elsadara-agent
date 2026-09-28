@@ -1,6 +1,6 @@
 from flask import Blueprint, request, render_template, jsonify
 from flask_login import login_required
-from services.feedback_service import FeedbackService 
+from services.domain.feedback_service import FeedbackService 
 
 feedbacks_bp = Blueprint('feedbacks', __name__)
 

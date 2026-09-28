@@ -6,9 +6,9 @@ from graph.prompts.inquiry_prompt import INQUIRY_SYSTEM_PROMPT
 from graph.state import AgentState
 from llm.llm import get_gemini
 from schemas.inquiry import InquiryResponse
-from services.client_service import ClientService
-from services.laboratory_service import LaboratoryService
-from services.bundle_service import BundleService
+from services.messaging.client_service import ClientService
+from services.domain.laboratory_service import LaboratoryService
+from services.domain.bundle_service import BundleService
 from utils.history_utils import get_chat_history
 from utils.llm_utils import extract_token_usage
 

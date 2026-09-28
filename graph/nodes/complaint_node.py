@@ -7,7 +7,7 @@ from graph.state import AgentState
 from graph.tools.complaint_tool import save_complaint_tool
 from llm.llm import get_gemini
 from schemas.complaint import ComplaintResponse
-from services.client_service import ClientService
+from services.messaging.client_service import ClientService
 from utils.history_utils import get_chat_history
 from utils.llm_utils import extract_token_usage
 from utils.text_utils import detect_language_fallback, get_platform_name

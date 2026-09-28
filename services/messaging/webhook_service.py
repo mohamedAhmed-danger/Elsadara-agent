@@ -9,10 +9,10 @@ from platforms.facebook.parser import parse_facebook_message, parse_facebook_com
 from platforms.waha.handler import WahaHandler
 from platforms.waha.parser import parse_waha_message
 from schemas.incoming_message import IncomingMessage
-from services.subscription_service import SubscriptionService
-from services.page_service import PageService
-from services.message_processor import run_agent
-from services.message_queue import user_lock_manager, message_debouncer
+from services.shared.subscription_service import SubscriptionService
+from services.domain.page_service import PageService
+from services.messaging.message_processor import run_agent
+from services.messaging.redis_queue import get_redis_client, enqueue_message
 from notification_center import send_production_alert
 from config import Config
 
@@ -76,70 +76,6 @@ def _send_reply(handler, user_id: str, reply: Optional[str], booking_pdf, visit_
         handler.send(user_id, build_post_booking_feedback_message(visit_reference))
 
 
-# ── Debounce Flush Callback ───────────────────────────────────────────────────
-
-def _make_flush_callback(platform_id: int, page_id: str, laboratory_id: int, app):
-    """
-    Build the callback that runs once a user's debounced messages are ready to send to the AI.
-    Only captures plain values (not SQLAlchemy objects) since it runs in a background thread.
-    """
-    def on_flush(user_id: str, combined_text: str, combined_ocr_usage: Optional[dict]):
-        with app.app_context():
-            with user_lock_manager.lock_for_user(user_id):
-                try:
-                    page = _fetch_page_and_check_quota(page_id, platform_id, "ON_FLUSH")
-                    if not page:
-                        return
-
-                    handler = get_handler(platform_id, page)
-                    handler.send_typing(user_id)
-
-                    incoming_msg = IncomingMessage(
-                        sender_id=user_id,
-                        page_id=page_id,
-                        platform_id=platform_id,
-                        platform_name=handler.platform_name,
-                        msg_type="text",
-                        text=combined_text,
-                    )
-
-                    reply, booking_pdf, visit_reference = run_agent(
-                        incoming_msg,
-                        ocr_usage=combined_ocr_usage,
-                        laboratory_id=laboratory_id,
-                    )
-                    _send_reply(handler, user_id, reply, booking_pdf, visit_reference)
-
-                except Exception as e:
-                    logger.exception("[ON_FLUSH] Error processing agent response for user=%s: %s", user_id, e)
-                    send_production_alert(
-                        subject="Webhook Debounce Agent Execution Failure",
-                        body_or_error=e,
-                        context={
-                            "platform_id": platform_id,
-                            "page_id": page_id,
-                            "laboratory_id": laboratory_id,
-                            "error": str(e),
-                        },
-                    )
-                    try:
-                        fresh_page = PageService.get_page_by_page_and_platform(page_id=page_id, platform_id=platform_id)
-                        if fresh_page:
-                            handler = get_handler(platform_id, fresh_page)
-                            handler.send(
-                                user_id,
-                                "عذرًا، حدث خطأ غير متوقع أثناء معالجة طلبك. يرجى المحاولة مرة أخرى بعد لحظات.",
-                            )
-                    except Exception:
-                        logger.exception(
-                            "[ON_FLUSH] Failed to send fallback error message to user=%s", user_id
-                        )
-                finally:
-                    db.session.remove()
-
-    return on_flush
-
-
 # ── Message Dispatcher ────────────────────────────────────────────────────────
 
 def dispatch_incoming_message(
@@ -152,59 +88,53 @@ def dispatch_incoming_message(
     """
     Handle one incoming message:
     - immediate mode: reply right away
-    - agent_text mode: queue it so the AI replies once the user stops typing (debounced)
+    - agent_text mode: queue it so the AI replies once the user stops typing (Redis debounced)
     """
     with app.app_context():
-        with user_lock_manager.lock_for_user(message.sender_id):
-            try:
-                page = _fetch_page_and_check_quota(page_id, platform_id, "DISPATCH")
-                if not page:
-                    return
+        # DESIGN DECISION: There is intentionally no lock wrapping dispatch_incoming_message or enqueue.
+        # Two near-simultaneous messages landing on different workers is an accepted rare edge case
+        # (at most a rare duplicate-billing event), traded off for simplicity.
+        try:
+            page = _fetch_page_and_check_quota(page_id, platform_id, "DISPATCH")
+            if not page:
+                return
 
-                handler = get_handler(platform_id, page)
-                prep_result = handler.prepare(message)
-                if not prep_result:
-                    return
+            handler = get_handler(platform_id, page)
+            result = handler.prepare(message)
+            if not result:
+                return
 
-                mode = prep_result[0]
+            if result.mode == "immediate":
+                handler.send_typing(message.sender_id)
+                _send_reply(handler, message.sender_id, result.text, result.extra)
 
-                if mode == "immediate":
-                    _, reply, pdf = prep_result
-                    handler.send_typing(message.sender_id)
-                    _send_reply(handler, message.sender_id, reply, pdf)
-
-                elif mode == "agent_text":
-                    _, text, ocr_usage = prep_result
-                    handler.send_typing(message.sender_id)
-                    flush_cb = _make_flush_callback(
-                        platform_id=platform_id,
-                        page_id=page_id,
-                        laboratory_id=laboratory_id,
-                        app=app,
-                    )
-                    received_at = getattr(message, "received_at", None) or time.time()
-                    message_debouncer.add_message(
-                        user_id=message.sender_id,
-                        text=text,
-                        ocr_usage=ocr_usage,
-                        on_flush_callback=flush_cb,
-                        received_at=received_at,
-                    )
-
-            except Exception as e:
-                logger.exception("[DISPATCH] Error handling message from user: %s", e)
-                send_production_alert(
-                    subject="Webhook Message Dispatch Error",
-                    body_or_error=e,
-                    context={
-                        "page_id": page_id,
-                        "platform_id": platform_id,
-                        "laboratory_id": laboratory_id,
-                        "error": str(e),
-                    },
+            elif result.mode == "agent_text":
+                handler.send_typing(message.sender_id)
+                r = get_redis_client()
+                enqueue_message(
+                    r,
+                    platform_id=platform_id,
+                    page_id=page_id,
+                    sender_id=message.sender_id,
+                    platform_name=handler.platform_name,
+                    text=result.text,
+                    received_at=getattr(message, "received_at", None),
                 )
-            finally:
-                db.session.remove()
+
+        except Exception as e:
+            logger.exception("[DISPATCH] Error handling message from user: %s", e)
+            send_production_alert(
+                subject="Webhook Message Dispatch Error",
+                body_or_error=e,
+                context={
+                    "page_id": page_id,
+                    "platform_id": platform_id,
+                    "laboratory_id": laboratory_id,
+                    "error": str(e),
+                },
+            )
+        finally:
+            db.session.remove()
 
 
 # ── Platform Webhook Processors ───────────────────────────────────────────────

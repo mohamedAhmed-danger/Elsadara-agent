@@ -4,7 +4,7 @@ from typing import Optional, Any
 
 from langchain_core.tools import tool
 
-from services.booking_service import BookingService
+from services.domain.booking_service import BookingService
 
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask_login import login_required
-from services.page_service import PageService
-from services.laboratory_service import LaboratoryService
+from services.domain.page_service import PageService
+from services.domain.laboratory_service import LaboratoryService
 
 pages_bp = Blueprint('pages', __name__, url_prefix='/pages')
  

@@ -5,9 +5,8 @@ from graph.graph import get_agent_graph
 from graph.response import AgentResponse
 from notification_center import send_production_alert, send_visit_confirmation_email
 from schemas.incoming_message import IncomingMessage
-from services.client_service import ClientService
-from services.page_service import PageService
-from services.subscription_consumer import consume_subscription
+from services.messaging.client_service import ClientService
+from services.domain.page_service import PageService
 from utils.history_utils import format_chat_history
 from utils.request_profiler import RequestProfiler
 from utils.usage_calculator import calc_total_usage
@@ -123,23 +122,13 @@ def _build_state(message: IncomingMessage, client, laboratory_id, history_rows) 
 
 
 def _record_usage(message: IncomingMessage, result: dict, ocr_usage: dict | None) -> dict | None:
-    """يحسب الاستهلاك ويخصمه من الاشتراك. لو فشل يتسجل ويتبعت alert والرد بيكمل."""
+    """يحسب الاستهلاك للتسجيل فقط دون تخصيم من الاشتراك."""
     try:
         usage = calc_total_usage(result, ocr_usage=ocr_usage)
-        consume_subscription(message, usage)
         return usage
     except Exception as e:
         logger.exception(
-            "[run_agent] Usage/subscription step failed | sender_id=%s", message.sender_id
-        )
-        send_production_alert(
-            subject="Subscription Consumption Failure",
-            body_or_error=e,
-            context={
-                "sender_id": message.sender_id,
-                "platform": message.platform_name,
-                "page_id": message.page_id,
-            },
+            "[run_agent] Usage calculation failed | sender_id=%s", message.sender_id
         )
         return None
 

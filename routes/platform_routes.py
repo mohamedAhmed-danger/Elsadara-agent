@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
-from services.platform_service import PlatformService
+from services.shared.platform_service import PlatformService
 
 platforms_bp = Blueprint('platforms', __name__, url_prefix='/platforms')
 

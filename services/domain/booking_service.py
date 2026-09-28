@@ -7,7 +7,7 @@ import openpyxl
 from sqlalchemy.exc import IntegrityError
 
 from models.models import Booking, Status, db
-from services.ticket_service import generate_booking_img
+from services.domain.ticket_service import generate_booking_img
 from utils.text_utils import make_reference_id
 
 logger = logging.getLogger(__name__)

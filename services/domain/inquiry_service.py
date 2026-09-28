@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from models.models import Inquiry, Status, db
-from services.client_service import ClientService
-from services.page_service import PageService
-from services.platform_service import PlatformService
-from services.tests_service import TestsService
+from services.messaging.client_service import ClientService
+from services.domain.page_service import PageService
+from services.shared.platform_service import PlatformService
+from services.domain.tests_service import TestsService
 
 logger = logging.getLogger(__name__)
 

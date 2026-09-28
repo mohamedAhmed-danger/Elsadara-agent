@@ -5,6 +5,7 @@ from schemas.direct import DirectResponse
 from schemas.inquiry import InquiryResponse
 from schemas.search import SearchResult
 from schemas.generation import TestGenerationResult
+from schemas.prepare_result import PrepareResult
 
 __all__ = [
     "IntentType",
@@ -16,4 +17,5 @@ __all__ = [
     "InquiryResponse",
     "SearchResult",
     "TestGenerationResult",
+    "PrepareResult",
 ]

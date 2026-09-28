@@ -32,7 +32,7 @@ class PageService:
     def get_all_platforms(self):
         """List all platforms. Returns (platforms, message); empty list on error."""
         try:
-            from services.platform_service import PlatformService
+            from services.shared.platform_service import PlatformService
             platforms = PlatformService.get_all_platforms_list()
             return platforms, "تم العثور على المنصات"
         except Exception:

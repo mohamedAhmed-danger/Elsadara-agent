@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from services.ocr_service import TestItem, PrescriptionOCRResult
-from services.prescription_intake import extract_prescription_payload
+from services.messaging.ocr_service import TestItem, PrescriptionOCRResult
+from services.messaging.prescription_intake import extract_prescription_payload
 from models.models import Status
 
 
@@ -21,14 +21,14 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
 
         self.sample_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xd9"
 
-    @patch("services.prescription_intake.InquiryService")
-    @patch("services.prescription_intake.ClientService")
-    @patch("services.prescription_intake.consume_subscription")
-    @patch("services.prescription_intake.analyze_prescription_image")
+    @patch("services.messaging.prescription_intake.InquiryService")
+    @patch("services.messaging.prescription_intake.ClientService")
+    @patch("services.messaging.prescription_intake.consume_subscription")
+    @patch("services.messaging.prescription_intake.analyze_prescription_image")
     def test_classification_spam_not_prescription(
         self, mock_ocr, mock_consume, mock_client_service, mock_inquiry_service
     ):
-        """Step A: If is_prescription is False, do NOT create Inquiry, return spam reply."""
+        """Step A: If is_prescription is False, do NOT create Inquiry, return spam label to agent."""
         mock_ocr.return_value = (
             PrescriptionOCRResult(
                 is_prescription=False,
@@ -42,16 +42,16 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
             self.sample_bytes, self.dummy_message, self.dummy_page
         )
 
-        self.assertEqual(result["mode"], "immediate")
-        self.assertIn("ليست روشتة طبية واضحة", result["reply"])
+        self.assertEqual(result["mode"], "agent")
+        self.assertEqual(result["text"], "[Image classified as spam or not a valid prescription]")
         mock_inquiry_service.assert_not_called()
         mock_consume.assert_called_once()
-        mock_client_service.return_value.save_chat_exchange.assert_called_once()
+        mock_client_service.return_value.save_chat_exchange.assert_not_called()
 
-    @patch("services.prescription_intake.InquiryService")
-    @patch("services.prescription_intake.ClientService")
-    @patch("services.prescription_intake.consume_subscription")
-    @patch("services.prescription_intake.analyze_prescription_image")
+    @patch("services.messaging.prescription_intake.InquiryService")
+    @patch("services.messaging.prescription_intake.ClientService")
+    @patch("services.messaging.prescription_intake.consume_subscription")
+    @patch("services.messaging.prescription_intake.analyze_prescription_image")
     def test_prescription_low_confidence_any_test_below_70(
         self, mock_ocr, mock_consume, mock_client_service, mock_inquiry_service
     ):
@@ -78,8 +78,8 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
             self.sample_bytes, self.dummy_message, self.dummy_page
         )
 
-        self.assertEqual(result["mode"], "immediate")
-        self.assertIn("وسيقوم الطبيب بمراجعتها", result["reply"])
+        self.assertEqual(result["mode"], "agent")
+        self.assertIn("Low OCR confidence (0.55)", result["text"])
 
         # Check Inquiry status was PENDING
         mock_inquiry_service.return_value.save_inquiry.assert_called_once()
@@ -89,12 +89,12 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
         self.assertIn("CBC", call_kwargs["services_mentioned"])
 
         mock_consume.assert_called_once()
-        mock_client_service.return_value.save_chat_exchange.assert_called_once()
+        mock_client_service.return_value.save_chat_exchange.assert_not_called()
 
-    @patch("services.prescription_intake.InquiryService")
-    @patch("services.prescription_intake.ClientService")
-    @patch("services.prescription_intake.consume_subscription")
-    @patch("services.prescription_intake.analyze_prescription_image")
+    @patch("services.messaging.prescription_intake.InquiryService")
+    @patch("services.messaging.prescription_intake.ClientService")
+    @patch("services.messaging.prescription_intake.consume_subscription")
+    @patch("services.messaging.prescription_intake.analyze_prescription_image")
     def test_prescription_high_confidence_all_tests_above_70(
         self, mock_ocr, mock_consume, mock_client_service, mock_inquiry_service
     ):
@@ -130,13 +130,13 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
         self.assertEqual(call_kwargs["status"], Status.REVIEWED)
         self.assertEqual(call_kwargs["confidence_score"], 0.75)
 
-        # Token consumption is deferred to agent debounce buffer in message_processor
-        mock_consume.assert_not_called()
+        # Immediate 2-unit consumption occurs for all images after OCR
+        mock_consume.assert_called_once()
 
-    @patch("services.prescription_intake.InquiryService")
-    @patch("services.prescription_intake.ClientService")
-    @patch("services.prescription_intake.consume_subscription")
-    @patch("services.prescription_intake.analyze_prescription_image")
+    @patch("services.messaging.prescription_intake.InquiryService")
+    @patch("services.messaging.prescription_intake.ClientService")
+    @patch("services.messaging.prescription_intake.consume_subscription")
+    @patch("services.messaging.prescription_intake.analyze_prescription_image")
     def test_prescription_empty_tests_safely_pending(
         self, mock_ocr, mock_consume, mock_client_service, mock_inquiry_service
     ):
@@ -154,15 +154,15 @@ class TestPrescriptionOCRFlow(unittest.TestCase):
             self.sample_bytes, self.dummy_message, self.dummy_page
         )
 
-        self.assertEqual(result["mode"], "immediate")
-        self.assertIn("وسيقوم الطبيب بمراجعتها", result["reply"])
+        self.assertEqual(result["mode"], "agent")
+        self.assertIn("Low OCR confidence (0.00)", result["text"])
 
         mock_inquiry_service.return_value.save_inquiry.assert_called_once()
         call_kwargs = mock_inquiry_service.return_value.save_inquiry.call_args.kwargs
         self.assertEqual(call_kwargs["status"], Status.PENDING)
 
-    @patch("services.prescription_intake.send_production_alert")
-    @patch("services.prescription_intake.analyze_prescription_image")
+    @patch("services.messaging.prescription_intake.send_production_alert")
+    @patch("services.messaging.prescription_intake.analyze_prescription_image")
     def test_technical_exception_triggers_alert_and_safe_reply(
         self, mock_ocr, mock_alert
     ):
@@ -209,7 +209,7 @@ class TestLayer1OCRService(unittest.TestCase):
 
     def test_mime_type_detection(self):
         """Test detection of JPEG, PNG, WEBP."""
-        from services.ocr_service import _detect_mime_type
+        from services.messaging.ocr_service import _detect_mime_type
 
         self.assertEqual(_detect_mime_type(b"\xff\xd8\xff\xe0..."), "image/jpeg")
         self.assertEqual(_detect_mime_type(b"\x89PNG\r\n\x1a\n..."), "image/png")
@@ -217,14 +217,14 @@ class TestLayer1OCRService(unittest.TestCase):
 
     def test_empty_image_raises_value_error(self):
         """Passing empty bytes to analyze_prescription_image must raise ValueError."""
-        from services.ocr_service import analyze_prescription_image
+        from services.messaging.ocr_service import analyze_prescription_image
 
         with self.assertRaises(ValueError):
             analyze_prescription_image(b"")
 
     def test_missing_file_raises_file_not_found(self):
         """Passing a non-existent file path must raise FileNotFoundError."""
-        from services.ocr_service import analyze_prescription_image
+        from services.messaging.ocr_service import analyze_prescription_image
 
         with self.assertRaises(FileNotFoundError):
             analyze_prescription_image("non_existent_file_12345.jpg")

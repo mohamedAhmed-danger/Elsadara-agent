@@ -6,8 +6,8 @@ from graph.prompts.direct_prompt import DIRECT_SYSTEM_PROMPT
 from graph.state import AgentState
 from llm.llm import get_gemini
 from schemas.direct import DirectResponse
-from services.client_service import ClientService
-from services.laboratory_service import LaboratoryService
+from services.messaging.client_service import ClientService
+from services.domain.laboratory_service import LaboratoryService
 from utils.history_utils import get_chat_history
 from utils.llm_utils import extract_token_usage
 

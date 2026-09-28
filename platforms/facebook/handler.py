@@ -143,8 +143,8 @@ class FacebookHandler(BaseHandler):
     def reply_to_comment(self, comment_id: str, static_message: str = "شكراً على تعليقك! راسلنا خاصةً للمساعدة. 🙏"):
         return fb_comments.reply_to_comment(comment_id, self.base_url, self.headers, self.page_id, static_message)
 
-    def send_private_reply(self, page_id, page_access_token: str, comment_id: str, text: str):
-        return fb_comments.send_private_reply(page_id, page_access_token, comment_id, text, self.base_url)
+    def send_private_reply(self, page_id, token: str, comment_id: str, text: str):
+        return fb_comments.send_private_reply(page_id, token, comment_id, text, self.base_url)
 
     # ── parsing ──────────────────────────────────────────────────────────────
 

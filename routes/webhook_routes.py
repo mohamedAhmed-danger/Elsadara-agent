@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import Blueprint, request, abort, current_app
 
 from config import Config
-from services.webhook_service import process_facebook_payload, process_waha_payload
+from services.messaging.webhook_service import process_facebook_payload, process_waha_payload
 
 logger = logging.getLogger(__name__)
 

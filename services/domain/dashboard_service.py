@@ -1,12 +1,12 @@
 import logging
 
 from models.models import db
-from services.laboratory_service import LaboratoryService
-from services.client_service import ClientService
-from services.booking_service import BookingService
-from services.inquiry_service import InquiryService
-from services.tests_service import TestsService
-from services.subscription_service import SubscriptionService
+from services.domain.laboratory_service import LaboratoryService
+from services.messaging.client_service import ClientService
+from services.domain.booking_service import BookingService
+from services.domain.inquiry_service import InquiryService
+from services.domain.tests_service import TestsService
+from services.shared.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
 

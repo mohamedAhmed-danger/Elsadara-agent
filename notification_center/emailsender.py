@@ -17,7 +17,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from notification_center.exceptions import LabSystemException
-from services.tenant_service import TenantService
+from services.domain.tenant_service import TenantService
 
 load_dotenv() 
 

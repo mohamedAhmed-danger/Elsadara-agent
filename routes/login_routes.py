@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, redirect, url_for, request, flash, render_template
 from flask_login import current_user, login_user, logout_user, login_required
-from services.dashboard_service import DashboardService
-from services.user_service import UserService
+from services.domain.dashboard_service import DashboardService
+from services.domain.user_service import UserService
 
 main_bp = Blueprint('main', __name__)
 

@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, redirect, request, session, url_for, jsonify, render_template
 from google_auth_oauthlib.flow import Flow
 from config import Config
-from services.tenant_service import TenantService
+from services.domain.tenant_service import TenantService
 
 gmail_auth_bp = Blueprint("gmail_auth", __name__)
 

@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
 
-from services.subscription_service import SubscriptionService
-from services.laboratory_service import LaboratoryService
+from services.shared.subscription_service import SubscriptionService
+from services.domain.laboratory_service import LaboratoryService
 
 
 subscription_bp = Blueprint('subscription', __name__, url_prefix='/admin/subscription')

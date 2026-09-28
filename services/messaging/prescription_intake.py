@@ -3,11 +3,11 @@ import os
 import uuid
 from typing import Optional, Tuple
 
-from services.ocr_service import analyze_prescription_image
-from services.client_service import ClientService
-from services.inquiry_service import InquiryService
+from services.messaging.ocr_service import analyze_prescription_image
+from services.messaging.client_service import ClientService
+from services.domain.inquiry_service import InquiryService
 from utils.usage_calculator import calc_total_usage
-from services.subscription_consumer import consume_subscription
+from services.shared.subscription_consumer import consume_subscription
 from models.models import Status
 from notification_center import send_production_alert
 from utils.trace_logger import trace_logger
@@ -74,27 +74,12 @@ def _save_prescription_image(image_bytes: bytes, sender_id: str) -> Tuple[str, s
 
 def _handle_non_prescription(message, ocr_usage: dict) -> dict:
     """Handles images classified as non-prescription/spam."""
-    spam_reply = "عذراً، يبدو أن الصورة المرفقة ليست روشتة طبية واضحة. يرجى إرسال صورة روشتة صحيحة لطلب التحاليل."
-    client_service = ClientService(
-        platform_id=message.platform_id,
-        page_id=message.page_id,
-        sender_id=message.sender_id,
-    )
-    client_service.save_chat_exchange(
-        user_message=message.text or "[صورة مرفقة]",
-        bot_reply=spam_reply,
-        summary="User sent an image that was classified as not a prescription or spam.",
-    )
-
-    if ocr_usage:
-        usage = calc_total_usage({}, ocr_usage=ocr_usage)
-        consume_subscription(message, usage)
-
+    agent_text = "[Image classified as spam or not a valid prescription]"
     trace_logger.step(
         "Prescription Decision: Non-Prescription",
-        input_data={"is_prescription": False, "reply": spam_reply},
+        input_data={"is_prescription": False, "agent_text": agent_text},
     )
-    return {"mode": "immediate", "reply": spam_reply, "pdf": None}
+    return {"mode": "agent", "text": agent_text, "ocr_usage": ocr_usage}
 
 
 def _determine_prescription_pending(ocr_result) -> bool:
@@ -136,28 +121,16 @@ def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool
 
 
 def _handle_pending_review(message, ocr_usage: dict, min_confidence: float) -> dict:
-    """Handles low-confidence flow with static doctor review reply."""
-    static_reply = "لقد استلمنا صورتك وسيقوم الطبيب بمراجعتها والرد عليك ."
-    client_service = ClientService(
-        platform_id=message.platform_id,
-        page_id=message.page_id,
-        sender_id=message.sender_id,
+    """Handles low-confidence flow routed to agent."""
+    agent_text = (
+        f"[Prescription image received. Low OCR confidence ({min_confidence:.2f}). "
+        f"Case has been queued for manual doctor review.]"
     )
-    client_service.save_chat_exchange(
-        user_message=message.text or "[صورة روشتة]",
-        bot_reply=static_reply,
-        summary="User uploaded a prescription image. Waiting for manual doctor review on dashboard.",
-    )
-
-    if ocr_usage:
-        usage = calc_total_usage({}, ocr_usage=ocr_usage)
-        consume_subscription(message, usage)
-
     trace_logger.step(
         "Prescription Decision: Pending Review",
-        input_data={"status": "PENDING", "min_confidence": min_confidence, "reply": static_reply},
+        input_data={"status": "PENDING", "min_confidence": min_confidence, "agent_text": agent_text},
     )
-    return {"mode": "immediate", "reply": static_reply, "pdf": None}
+    return {"mode": "agent", "text": agent_text, "ocr_usage": ocr_usage}
 
 
 def _handle_reviewed_prescription(ocr_result, ocr_usage: dict) -> dict:
@@ -177,9 +150,8 @@ def _handle_reviewed_prescription(ocr_result, ocr_usage: dict) -> dict:
 
 def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
     """
-    Ingests prescription image bytes, performs OCR analysis, and routes to either:
-    - {"mode": "agent", "text": "...", "ocr_usage": {...}} -> debounce buffer
-    - {"mode": "immediate", "reply": "...", "pdf": None} -> immediate response
+    Ingests prescription image bytes, performs OCR analysis, deducts 2 subscription units,
+    and returns {"mode": "agent", "text": "...", "ocr_usage": {...}} for debounce buffer.
     """
     try:
         if not _looks_like_valid_image(image_bytes):
@@ -206,6 +178,10 @@ def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
 
         filename, image_path = _save_prescription_image(image_bytes, message.sender_id)
         ocr_result, ocr_usage = analyze_prescription_image(image_path)
+
+        # Single shared deduction point for all image messages: deduct 2 units immediately after OCR
+        usage = calc_total_usage({}, ocr_usage=ocr_usage) if ocr_usage else None
+        consume_subscription(message, usage=usage, count=2)
 
         logger.info(
             "[PRESCRIPTION OCR RESULT]\n"

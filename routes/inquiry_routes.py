@@ -3,7 +3,7 @@ from flask import Blueprint, request, render_template, flash, url_for, redirect,
 from flask_login import login_required
 
 from models.models import Status
-from services.inquiry_service import InquiryService
+from services.domain.inquiry_service import InquiryService
 
 inquiries_bp = Blueprint('inquiries', __name__, url_prefix='/inquiries')
 

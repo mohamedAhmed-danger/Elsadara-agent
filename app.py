@@ -71,7 +71,7 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_global_counts():
         try:
-            from services.inquiry_service import InquiryService
+            from services.domain.inquiry_service import InquiryService
             count = InquiryService.get_pending_inquiries_count()
         except Exception:
             count = 0

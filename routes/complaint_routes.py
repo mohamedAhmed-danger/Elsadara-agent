@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, send_file
 from flask_login import login_required
 from models.models import Status
-from services.complaint_service import ComplaintService
+from services.domain.complaint_service import ComplaintService
 
 complaints_bp = Blueprint('complaints', __name__, url_prefix='/complaints')
 

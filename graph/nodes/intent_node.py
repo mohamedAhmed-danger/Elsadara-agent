@@ -7,7 +7,7 @@ from graph.prompts.intent_prompt import INTENT_SYSTEM_PROMPT
 from graph.state import AgentState
 from llm.llm import get_gemini
 from schemas.intent import IntentResponse, IntentType
-from services.client_service import ClientService
+from services.messaging.client_service import ClientService
 from utils.history_utils import get_chat_history
 from utils.llm_utils import extract_token_usage
 

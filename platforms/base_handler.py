@@ -1,6 +1,8 @@
 import logging
 
-from services.prescription_intake import extract_prescription_payload
+from schemas.prepare_result import PrepareResult
+from services.messaging.prescription_intake import extract_prescription_payload
+from services.shared.subscription_consumer import consume_subscription
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +17,15 @@ class BaseHandler:
         self.page_id = page.page_id
         self.token = page.token
 
-    def prepare(self, message):
+    def prepare(self, message) -> PrepareResult:
         """
         بتجهز الرسالة، من غير ما تستدعي الـ agent أو تبعت رد.
-        بترجع tuple واحد من اتنين:
+        بترجع PrepareResult(mode, text, extra):
 
-        - ("agent_text", text, ocr_usage)
+        - PrepareResult("agent_text", text, ocr_usage)
           → لازم يتحط في الـ debounce buffer
 
-        - ("immediate", reply, pdf)
+        - PrepareResult("immediate", reply, pdf)
           → لازم يتبعت فورًا للمستخدم
         """
         logger.debug(
@@ -32,21 +34,22 @@ class BaseHandler:
         )
 
         if message.type == "text":
-            return ("agent_text", message.text, None)
+            consume_subscription(message, count=1)
+            return PrepareResult("agent_text", message.text, None)
 
         if message.type == "image":
             image_bytes = self.download_media(message.media, media_type="image")
             if not image_bytes:
                 logger.warning("[PREPARE] Image download failed for user=%s", message.sender_id)
-                return ("immediate", "عذرًا، فشل تحميل الصورة المرفقة. يرجى المحاولة مرة أخرى.", None)
+                return PrepareResult("immediate", "عذرًا، فشل تحميل الصورة المرفقة. يرجى المحاولة مرة أخرى.", None)
 
             result = extract_prescription_payload(image_bytes, message, self.page)
             if result["mode"] == "agent":
-                return ("agent_text", result["text"], result["ocr_usage"])
-            return ("immediate", result["reply"], result.get("pdf"))
+                return PrepareResult("agent_text", result["text"], result["ocr_usage"])
+            return PrepareResult("immediate", result["reply"], result.get("pdf"))
 
         logger.info("[PREPARE] Unsupported message type=%s -> immediate response", message.type)
-        return ("immediate", self._handle_media(message.type), None)
+        return PrepareResult("immediate", self._handle_media(message.type), None)
 
     def _handle_media(self, msg_type: str) -> str:
         responses = {

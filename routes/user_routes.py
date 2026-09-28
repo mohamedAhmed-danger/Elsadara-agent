@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
-from services.user_service import UserService
+from services.domain.user_service import UserService
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 

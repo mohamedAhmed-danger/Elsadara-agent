@@ -55,9 +55,9 @@ except ImportError:
 
 from models.models import db, Laboratory  # noqa: E402
 import services.tests_service as tests_service_module  # noqa: E402
-from services.tests_service import TestsService  # noqa: E402
-from services.generation_service import generate_test  # noqa: E402
-from services.vector_service import upsert_test_vector as _real_upsert_test_vector  # noqa: E402
+from services.domain.tests_service import TestsService  # noqa: E402
+from services.shared.generation_service import generate_test  # noqa: E402
+from services.shared.vector_service import upsert_test_vector as _real_upsert_test_vector  # noqa: E402
 
 try:
     from utils.text_utils import build_test_text

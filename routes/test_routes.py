@@ -1,6 +1,6 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import login_required
-from services.tests_service import TestsService
+from services.domain.tests_service import TestsService
 
 test_bp = Blueprint("test", __name__)
 
