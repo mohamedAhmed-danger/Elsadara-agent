@@ -50,6 +50,8 @@ services:
         condition: service_started
       waha1:
         condition: service_started
+      redis:
+        condition: service_started
     networks:
       - internal
 
@@ -84,38 +86,36 @@ services:
     networks:
       - internal
 
-  # لو محتاج أكتر من رقم واتساب: انسخ بلوك waha1 كامل وغيّر بس:
-  #   اسم الـ service والـ container_name (waha2)
-  #   البورت (127.0.0.1:3006:3000)
-  #   WAHA_BASE_URL=http://waha2:3000
-  #   فولدر الجلسات (./waha_sessions2)
-  # وضيفه في depends_on بتاع web.
+  redis:
+    image: redis:7-alpine
+    container_name: sadara-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - internal
 
-  # ── اختياري: شيل التعليق لو المشروع بيستخدمهم فعلًا ─────────────────────────
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: sadara-redis
-  #   restart: always
-  #   command: ["redis-server", "--appendonly", "yes"]
-  #   volumes:
-  #     - redisdata:/data
-  #   networks:
-  #     - internal
-  #
-  # redis_worker:
-  #   build: .
-  #   container_name: sadara-redis-worker
-  #   restart: always
-  #   command: ["python", "-m", "services.redis_worker"]   # عدّل المسار حسب مشروعك
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./static/uploads:/app/static/uploads
-  #   depends_on:
-  #     - db
-  #     - redis
-  #   networks:
-  #     - internal
+  redis_worker:
+    build: .
+    container_name: sadara-redis-worker
+    restart: always
+    command: ["python", "-m", "services.messaging.redis_worker"]
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance
+      - ./static/uploads:/app/static/uploads
+      - ./credentials.json:/app/credentials.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - internal
 
 networks:
   internal:
@@ -124,4 +124,4 @@ networks:
 volumes:
   mysqldata:
   qdrantdata:
-  # redisdata:
+  redisdata:
