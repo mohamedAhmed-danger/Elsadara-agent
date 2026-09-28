@@ -20,7 +20,7 @@ services:
       - internal
 
   qdrant:
-    # لازم نفس إصدار الـ Qdrant اللي شغال عندك local (شوفه من: curl http://localhost:6333)
+   
     image: qdrant/qdrant:v1.19.0
     container_name: sadara-qdrant
     restart: always
@@ -36,7 +36,7 @@ services:
     container_name: sadara-labs-agent
     restart: always
     ports:
-      - "6152:4500"      # nginx بس هو اللي يوصله
+      - "6152:4500"      
     env_file:
       - .env
     volumes:

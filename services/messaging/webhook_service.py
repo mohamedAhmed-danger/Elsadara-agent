@@ -119,6 +119,7 @@ def dispatch_incoming_message(
                     platform_name=handler.platform_name,
                     text=result.text,
                     received_at=getattr(message, "received_at", None),
+                    image_result=result.image_result,
                 )
 
         except Exception as e:

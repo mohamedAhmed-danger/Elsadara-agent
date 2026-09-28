@@ -45,7 +45,7 @@ class BaseHandler:
 
             result = extract_prescription_payload(image_bytes, message, self.page)
             if result["mode"] == "agent":
-                return PrepareResult("agent_text", result["text"], result["ocr_usage"])
+                return PrepareResult("agent_text", result["text"], result["ocr_usage"],result.get(image_result))
             return PrepareResult("immediate", result["reply"], result.get("pdf"))
 
         logger.info("[PREPARE] Unsupported message type=%s -> immediate response", message.type)

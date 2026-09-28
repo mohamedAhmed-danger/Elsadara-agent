@@ -263,7 +263,29 @@ def _finish_processing(
     )
     return False
 
+def build_agent_text(entries: list[dict]) -> str:
+    """Builds the agent's input: user texts and numbered images, in their real arrival order."""
+    lines: list[str] = []
+    image_no = 0
 
+    for entry in entries:
+        image = entry.get("image")
+
+        if image:
+            image_no += 1
+            status = image.get("status")
+            if status == "valid":
+                tests = ", ".join(image.get("tests", []))
+                lines.append(f"[Image #{image_no} - OCR Extracted Tests]: {tests}")
+            elif status == "pending":
+                lines.append(f"[Image #{image_no} - Prescription detected but unclear]")
+            else:
+                lines.append(f"[Image #{image_no} - spam or irrelevant]")
+
+        elif entry.get("text"):
+            lines.append(f"[User text]: {entry['text']}")
+
+    return "\n".join(lines)
 # ============================================================================
 # Process Conversation
 # ============================================================================
@@ -305,18 +327,12 @@ def process_conversation(
 
             handler = get_handler(platform_id, page)
 
-            text_parts: list[str] = []
-            for entry in entries:
-                text = entry.get("text")
-                if text:
-                    text_parts.append(text)
+            combined_text = build_agent_text(entries)
 
-            if not text_parts:
+            if not combined_text:
                 _require_ownership(r, conversation_key, owner_token, heartbeat_script)
                 _finish_processing(r, conversation_key, owner_token, finish_script)
                 return
-
-            combined_text = PRESCRIPTION_SEPARATOR.join(text_parts)
 
             _require_ownership(r, conversation_key, owner_token, heartbeat_script)
             handler.send_typing(sender_id)

@@ -87,7 +87,7 @@ def _determine_prescription_pending(ocr_result) -> bool:
     """Returns True if prescription requires manual doctor review due to low confidence."""
     if not ocr_result.tests:
         return True
-    return any(test.confidence < 0.70 for test in ocr_result.tests)
+    return any(test.confidence < 0.80 for test in ocr_result.tests)
 
 
 def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool) -> float:
@@ -148,6 +148,12 @@ def _handle_reviewed_prescription(ocr_result, ocr_usage: dict) -> dict:
     )
     return {"mode": "agent", "text": agent_text, "ocr_usage": ocr_usage}
 
+def _image_result(status: str, ocr_result=None) -> dict:
+    """status: "valid" | "pending" | "spam"."""
+    tests = []
+    if ocr_result:
+        tests = [t.name for t in ocr_result.tests if t.name]
+    return {"status": status, "tests": tests}
 
 def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
     """
@@ -196,20 +202,26 @@ def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
             ocr_usage.get("total_tokens", 0) if ocr_usage else 0,
         )
 
-        # Step A: Classification check (not a prescription / spam)
+                # Step A: Classification check (not a prescription / spam)
         if not ocr_result.is_prescription:
-            return _handle_non_prescription(message, ocr_usage)
+            payload = _handle_non_prescription(message, ocr_usage)
+            payload["image_result"] = _image_result("spam")
+            return payload
 
         # Step B: Confidence check & persistence
         pending = _determine_prescription_pending(ocr_result)
         min_confidence = _save_inquiry_record(message, page, filename, ocr_result, pending)
 
         if pending:
-            return _handle_pending_review(message, ocr_usage, min_confidence)
+            payload = _handle_pending_review(message, ocr_usage, min_confidence)
+            payload["image_result"] = _image_result("pending")
+            return payload
 
-        # Step C: Reviewed flow -> ALL tests >= 0.70
-        return _handle_reviewed_prescription(ocr_result, ocr_usage)
-
+        # Step C: Reviewed flow -> ALL tests >= 0.80
+        payload = _handle_reviewed_prescription(ocr_result, ocr_usage)
+        payload["image_result"] = _image_result("valid", ocr_result)
+        return payload
+    
     except Exception as e:
         logger.exception(
             "[extract_prescription_payload] Error | sender_id=%s", message.sender_id,
