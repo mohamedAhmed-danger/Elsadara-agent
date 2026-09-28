@@ -21,7 +21,7 @@ class RefinedQuery(BaseModel):
         description="Alternative names, abbreviations, Arabic and Franco-Arab terms for the exact same test."
     )
     keywords: List[str] = Field(
-        ..., min_length=2, max_length=5,
+        ..., min_length=2,
         description="2-5 distinctive English search terms for the test."
     )
     description: str = Field(

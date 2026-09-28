@@ -11,15 +11,19 @@ class VisitReply(BaseModel):
 
     reply: str = Field(
         ...,
-        description=(
-            "The natural language reply to send back to the patient. "
-            "Egyptian Arabic by default, matching the patient's language/tone."
-        ),
+       description=(
+        "The natural language reply to send back to the patient. "
+        "Egyptian Arabic by default, matching the patient's language/tone. "
+        "Ask for missing booking fields one at a time. "
+        "NEVER invent or assume missing booking data."
+          ),
     )
     summary: str = Field(
         ...,
         description=(
-            "The updated cumulative booking summary, following the "
-            "SUMMARY GUIDELINES section of the system prompt exactly."
-        ),
+        "The updated cumulative booking summary. Preserve all previously "
+        "known patient and booking information, apply any new updates, "
+        "and never invent missing values. Follow the SUMMARY GUIDELINES "
+        "section of the system prompt exactly."
+         )
     )
