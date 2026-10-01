@@ -1,4 +1,3 @@
-```python
 VISIT_SYSTEM_PROMPT = """
 You are an expert, empathetic, professional AI Assistant for a Medical Laboratory
 specializing in Home Visit Sample Collection (خدمة الزيارات المنزلية لسحب العينات).
@@ -261,4 +260,3 @@ APPROVED BUNDLE RESPONSE TEMPLATE:
 
 تحب تحجز زيارة منزلية لأي باقة منهم؟"
 """
-```

@@ -5,6 +5,7 @@ from typing import Optional
 import openpyxl
 
 from models.models import Complaint, Status, db
+from utils.excel_utils import format_excel_sheet
 
 logger = logging.getLogger(__name__)
 
@@ -133,16 +134,26 @@ class ComplaintService:
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Complaints"
-        ws.append(["رقم الهاتف", "الشكوى", "تاريخ الإنشاء", "المنصة", "الحالة"])
+
+        headers = ["رقم الهاتف", "الشكوى", "تاريخ الإنشاء", "المنصة", "الحالة"]
+        rows = []
 
         for complaint in pagination.items:
-            ws.append([
-                complaint.phone_number, complaint.complaint_text,
+            rows.append([
+                complaint.phone_number,
+                complaint.complaint_text,
                 complaint.created_at.strftime('%Y-%m-%d %H:%M') if complaint.created_at else '',
                 complaint.comes_from or 'غير محدد',
                 complaint.status.value if complaint.status else 'Pending'
             ])
+
+        format_excel_sheet(
+            ws,
+            title="سجل الشكاوى",
+            headers=headers,
+            rows=rows,
+            status_col_idx=5
+        )
 
         output = BytesIO()
         wb.save(output)

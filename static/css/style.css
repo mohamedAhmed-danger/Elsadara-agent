@@ -1954,3 +1954,336 @@ textarea.form-control {
     gap: 12px;
     flex-wrap: wrap;
 }
+
+/* ============================================================
+   Phase 3 Upgrades: Glassmorphism & Micro-animations
+   ============================================================ */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 10px 30px 0 rgba(15, 23, 42, 0.08);
+  --glass-blur: blur(16px) saturate(180%);
+}
+
+/* Glassmorphism Cards & Panels */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-md);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px 0 rgba(15, 23, 42, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.glass-btn {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  color: var(--navy-900) !important;
+  font-weight: 700 !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.glass-btn:hover {
+  background: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1) !important;
+}
+
+.glass-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
+.chip-success { background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); }
+.chip-warning { background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
+.chip-primary { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.3); }
+.chip-info { background: rgba(14, 165, 233, 0.15); color: #0369a1; border: 1px solid rgba(14, 165, 233, 0.3); }
+.chip-teal { background: rgba(20, 184, 166, 0.15); color: #0f766e; border: 1px solid rgba(20, 184, 166, 0.3); }
+
+/* Quick Date Presets Bar in Booking */
+.ts-date-presets-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: rgba(241, 245, 249, 0.6);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.ts-presets-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-700);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+}
+.ts-presets-label svg { width: 14px; height: 14px; color: var(--blue-600); }
+
+.ts-preset-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: var(--ink-700);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ts-preset-btn:hover {
+  background: var(--blue-600);
+  color: #ffffff;
+  border-color: var(--blue-600);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.ts-preset-reset {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--red-500);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.ts-preset-reset:hover {
+  background: var(--red-500);
+  color: #ffffff;
+  border-color: var(--red-500);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+/* System Health Layout & Cards */
+.health-hero-card {
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(241, 245, 249, 0.85) 100%);
+}
+.hero-healthy { border-right: 5px solid var(--green-500); }
+.hero-warning { border-right: 5px solid var(--amber-500); }
+
+.health-hero-body {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.health-status-icon-wrap {
+  width: 60px; height: 60px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.wrap-healthy { background: rgba(34, 197, 94, 0.12); color: var(--green-500); }
+.wrap-warning { background: rgba(245, 158, 11, 0.12); color: var(--amber-500); }
+
+.health-status-main-icon { width: 32px; height: 32px; animation: floatSmooth 3s ease-in-out infinite; }
+
+.health-hero-info { flex: 1; min-width: 260px; }
+.health-hero-title {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 1.25rem; font-weight: 800; color: var(--navy-900);
+  margin-bottom: 4px;
+}
+.health-hero-desc { font-size: 0.88rem; color: var(--ink-500); margin: 0; }
+
+.health-hero-meta {
+  display: flex; flex-direction: column; gap: 6px;
+  padding-right: 20px; border-right: 1px dashed rgba(203, 213, 225, 0.8);
+  font-size: 0.82rem;
+}
+.meta-label { color: var(--ink-500); }
+.meta-value { font-weight: 700; color: var(--navy-900); }
+
+/* Health Metric Cards Grid */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.health-grid-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+.health-metric-card {
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.health-card-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; position: relative;
+}
+
+.health-card-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.health-card-icon svg { width: 22px; height: 22px; }
+.db-icon { background: rgba(59, 130, 246, 0.12); color: var(--blue-600); }
+.ram-icon { background: rgba(139, 92, 246, 0.12); color: var(--purple-500); }
+.disk-icon { background: rgba(20, 184, 166, 0.12); color: var(--teal-500); }
+
+.health-card-title { font-size: 1rem; font-weight: 800; color: var(--navy-900); }
+.health-card-sub { font-size: 0.78rem; color: var(--ink-500); margin: 0; }
+
+.status-indicator-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  margin-right: auto;
+  position: relative;
+}
+.dot-online {
+  background: var(--green-500);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+}
+.dot-warning {
+  background: var(--amber-500);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+.dot-offline {
+  background: var(--red-500);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.metric-big-num { font-size: 2rem; font-weight: 800; color: var(--navy-900); line-height: 1; }
+.metric-big-num small { font-size: 1rem; color: var(--ink-500); }
+.metric-label { font-size: 0.8rem; color: var(--ink-500); margin-top: 4px; }
+
+.progress-bar-container {
+  width: 100%; height: 8px;
+  background: rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: var(--radius-pill);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+}
+.db-progress { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+.ram-progress { background: linear-gradient(90deg, #8b5cf6, #3b82f6); }
+.disk-progress { background: linear-gradient(90deg, #14b8a6, #10b981); }
+
+.metric-footer-text { font-size: 0.78rem; font-weight: 600; color: var(--ink-700); margin-top: 8px; }
+
+/* Counts Grid */
+.glass-card-heading {
+  font-size: 1.05rem; font-weight: 800; color: var(--navy-900);
+  display: flex; align-items: center; gap: 8px;
+}
+.heading-icon { width: 18px; height: 18px; color: var(--blue-600); }
+
+.counts-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.count-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius-sm);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.count-item:hover { transform: translateX(-2px); background: #ffffff; }
+
+.count-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.count-icon svg { width: 18px; height: 18px; }
+.icon-blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+.icon-purple { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+.icon-amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.icon-teal { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
+.icon-green { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+.icon-red { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+
+.count-label { font-size: 0.8rem; font-weight: 600; color: var(--ink-700); flex: 1; }
+.count-val { font-size: 1.15rem; font-weight: 800; color: var(--navy-900); }
+
+/* Component status rows */
+.component-status-list { display: flex; flex-direction: column; gap: 12px; }
+.comp-status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius-sm);
+}
+.comp-info { display: flex; align-items: center; gap: 12px; }
+.comp-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.comp-name { font-size: 0.85rem; font-weight: 700; color: var(--navy-900); }
+.comp-desc { font-size: 0.75rem; color: var(--ink-500); }
+
+/* Keyframe Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatSmooth {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes spinAnim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-anim {
+  animation: spinAnim 1s linear infinite;
+}
+
+/* Enhanced Form Control Focus Glow */
+.form-control:focus {
+  border-color: var(--blue-500) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+  outline: none;
+}
+
+/* Micro-animations on interactive elements */
+.btn {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}

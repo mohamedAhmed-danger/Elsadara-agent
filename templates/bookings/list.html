@@ -37,6 +37,20 @@
 
 <!-- ── Filter & Search Bar ─────────────────────────────────── -->
 <div class="card ts-filter-card">
+  <!-- Quick Date Presets Bar -->
+  <div class="ts-date-presets-bar">
+    <span class="ts-presets-label"><i data-lucide="zap"></i> فلترة سريعة بالتاريخ:</span>
+    <button type="button" class="ts-preset-btn" onclick="setDatePreset('today')">اليوم</button>
+    <button type="button" class="ts-preset-btn" onclick="setDatePreset('yesterday')">أمس</button>
+    <button type="button" class="ts-preset-btn" onclick="setDatePreset('this_week')">هذا الأسبوع</button>
+    <button type="button" class="ts-preset-btn" onclick="setDatePreset('this_month')">هذا الشهر</button>
+    {% if date_from or date_to %}
+    <button type="button" class="ts-preset-btn ts-preset-reset" onclick="setDatePreset('clear')">
+      <i data-lucide="x-circle"></i> مسح التاريخ
+    </button>
+    {% endif %}
+  </div>
+
   <form method="GET" action="{{ url_for('bookings.list_bookings') }}" class="ts-filter-form">
     <div class="ts-filter-field ts-filter-search">
       <label class="ts-filter-label">بحث بالاسم أو الهاتف</label>
@@ -69,12 +83,16 @@
 
     <div class="ts-filter-field ts-filter-narrow">
       <label class="ts-filter-label">من تاريخ</label>
-      <input type="date" name="date_from" value="{{ date_from or '' }}" class="form-control">
+      <div class="ts-input-icon-wrap">
+        <input type="date" name="date_from" value="{{ date_from or '' }}" class="form-control">
+      </div>
     </div>
 
     <div class="ts-filter-field ts-filter-narrow">
       <label class="ts-filter-label">إلى تاريخ</label>
-      <input type="date" name="date_to" value="{{ date_to or '' }}" class="form-control">
+      <div class="ts-input-icon-wrap">
+        <input type="date" name="date_to" value="{{ date_to or '' }}" class="form-control">
+      </div>
     </div>
 
     <div class="ts-filter-actions">
@@ -215,5 +233,51 @@
   </nav>
 </div>
 {% endif %}
+
+{% block scripts %}
+<script>
+function setDatePreset(type) {
+  const fromInput = document.querySelector('input[name="date_from"]');
+  const toInput = document.querySelector('input[name="date_to"]');
+  if (!fromInput || !toInput) return;
+  const form = fromInput.closest('form');
+
+  const now = new Date();
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  if (type === 'today') {
+    const todayStr = formatDate(now);
+    fromInput.value = todayStr;
+    toInput.value = todayStr;
+  } else if (type === 'yesterday') {
+    const yest = new Date(now);
+    yest.setDate(now.getDate() - 1);
+    const yestStr = formatDate(yest);
+    fromInput.value = yestStr;
+    toInput.value = yestStr;
+  } else if (type === 'this_week') {
+    const dayOfWeek = now.getDay();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - dayOfWeek);
+    fromInput.value = formatDate(startOfWeek);
+    toInput.value = formatDate(now);
+  } else if (type === 'this_month') {
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    fromInput.value = formatDate(startOfMonth);
+    toInput.value = formatDate(now);
+  } else if (type === 'clear') {
+    fromInput.value = '';
+    toInput.value = '';
+  }
+
+  if (form) form.submit();
+}
+</script>
+{% endblock %}
 
 {% endblock %}

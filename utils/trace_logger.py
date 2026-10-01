@@ -24,6 +24,7 @@ Features:
 import contextvars
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import re
 import sys
@@ -50,19 +51,46 @@ if hasattr(sys.stderr, "reconfigure"):
 LOG_LEVEL_NAME = os.getenv("LOG_LEVEL", "DEBUG").upper()
 LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.DEBUG)
 
-# ── Logger Setup ───────────────────────────────────────────────────────────────
+# ── Logger Setup & Persistent File Handlers ─────────────────────────────────────
 
 LOGGER_NAME = "elsadara.trace"
 _logger = logging.getLogger(LOGGER_NAME)
 _logger.setLevel(LOG_LEVEL)
 
-# Ensure output appears in stdout if no root handler is attached yet
+# Ensure logs directory exists
+LOG_DIR = os.path.join(os.getcwd(), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Stream handler for stdout
 if not _logger.handlers and not logging.getLogger().handlers:
     _handler = logging.StreamHandler(sys.stdout)
     _handler.setLevel(LOG_LEVEL)
     _handler.setFormatter(logging.Formatter("%(message)s"))
     _logger.addHandler(_handler)
     _logger.propagate = False
+
+# File handlers for persistence (elsadara.log & error.log)
+_has_file_handler = any(isinstance(h, RotatingFileHandler) for h in _logger.handlers)
+if not _has_file_handler:
+    file_handler = RotatingFileHandler(
+        os.path.join(LOG_DIR, "elsadara.log"),
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+    file_handler.setLevel(LOG_LEVEL)
+    file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+    _logger.addHandler(file_handler)
+
+    err_handler = RotatingFileHandler(
+        os.path.join(LOG_DIR, "error.log"),
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+    err_handler.setLevel(logging.WARNING)
+    err_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+    _logger.addHandler(err_handler)
 
 # ── Context Variables for Request & Pipeline State ─────────────────────────────
 
@@ -814,4 +842,88 @@ class _TraceLogger:
         return _logger.isEnabledFor(logging.DEBUG)
 
 
+def log_production_summary(
+    sender_id: str = "",
+    platform_name: str = "",
+    page_id: str = "",
+    user_message: str = "",
+    detected_intent: Optional[str] = None,
+    chat_summary: Optional[str] = None,
+    bot_response: Optional[str] = None,
+    usage: Optional[dict] = None,
+    ocr_result: Optional[dict] = None,
+    duration: float = 0.0,
+    **kwargs,
+):
+    """
+    Emits a clean, highly structured UTF-8 ASCII box-drawing summary of a completed request execution,
+    including context, intent, conversation exchange, OCR findings, and a token usage/cost table.
+    """
+    tid = get_trace_id()
+    masked_sender = mask_phone_number(sender_id) if sender_id else "N/A"
+    platform_str = f"{platform_name or 'N/A'} (Page: {page_id or 'N/A'})"
+    
+    lines = []
+    lines.append("╔══════════════════════════════════════════════════════════════════════════════════════════════╗")
+    lines.append("║                     📊 ELSADARA AGENT - PRODUCTION SUMMARY                           ║")
+    lines.append("╠══════════════════════════════════════════════════════════════════════════════════════════════╣")
+    lines.append("║ 🆔 Request Context                                                                           ║")
+    lines.append(f"║   • Trace ID:      {tid}")
+    lines.append(f"║   • Sender ID:     {masked_sender}")
+    lines.append(f"║   • Platform/Page: {platform_str}")
+    if duration > 0:
+        lines.append(f"║   • Duration:      {duration:.2f}s")
+    
+    lines.append("╠══════════════════════════════════════════════════════════════════════════════════════════════╣")
+    lines.append("║ 💬 Conversation & Intent Details                                                             ║")
+    lines.append(f"║   • User Message:   {safe_preview(user_message, max_len=120) if user_message else 'N/A'}")
+    lines.append(f"║   • Detected Intent: {detected_intent or 'N/A'}")
+    if chat_summary:
+        lines.append(f"║   • Chat Summary:   {safe_preview(chat_summary, max_len=120)}")
+    if bot_response:
+        lines.append(f"║   • Bot Response:   {safe_preview(bot_response, max_len=150)}")
+        
+    if ocr_result and isinstance(ocr_result, dict):
+        lines.append("╠══════════════════════════════════════════════════════════════════════════════════════════════╣")
+        lines.append("║ 👁️ OCR Prescription Results                                                                  ║")
+        lines.append(f"║   • OCR Status:     {ocr_result.get('status', 'SUCCESS')}")
+        if ocr_result.get("extracted_text"):
+            lines.append(f"║   • Extracted Text: {safe_preview(ocr_result['extracted_text'], max_len=120)}")
+        if ocr_result.get("recognized_services"):
+            services = ocr_result['recognized_services']
+            services_str = ", ".join([str(s) for s in services]) if isinstance(services, list) else str(services)
+            lines.append(f"║   • Recognized:     {safe_preview(services_str, max_len=120)}")
+        if ocr_result.get("confidence_score") is not None:
+            lines.append(f"║   • Confidence:     {ocr_result['confidence_score']}%")
+
+    if usage and isinstance(usage, dict) and usage.get("breakdown"):
+        lines.append("╠══════════════════════════════════════════════════════════════════════════════════════════════╣")
+        lines.append("║ 🧮 Token Usage & Cost Breakdown Table                                                       ║")
+        lines.append("║  ┌──────────────────┬──────────────┬───────────────┬──────────────┬────────────────────────┐  ║")
+        lines.append("║  │ Pipeline Node    │ Input Tokens │ Output Tokens │ Total Tokens │ Est. Cost (USD)        │  ║")
+        lines.append("║  ├──────────────────┼──────────────┼───────────────┼──────────────┼────────────────────────┤  ║")
+        
+        breakdown = usage.get("breakdown", {})
+        for node_key, info in breakdown.items():
+            in_t = info.get("input", 0)
+            out_t = info.get("output", 0)
+            tot_t = info.get("total", 0)
+            cost = info.get("cost_usd", 0.0)
+            lines.append(f"║  │ {node_key:<16} │ {in_t:>12,} │ {out_t:>13,} │ {tot_t:>12,} │ ${cost:<21.6f} │  ║")
+            
+        lines.append("║  ├──────────────────┼──────────────┼───────────────┼──────────────┼────────────────────────┤  ║")
+        tot_in = usage.get("total_input", 0)
+        tot_out = usage.get("total_output", 0)
+        tot_all = usage.get("total_tokens", 0)
+        tot_cost = usage.get("total_cost_usd", 0.0)
+        lines.append(f"║  │ TOTAL            │ {tot_in:>12,} │ {tot_out:>13,} │ {tot_all:>12,} │ ${tot_cost:<21.6f} │  ║")
+        lines.append("║  └──────────────────┴──────────────┴───────────────┴──────────────┴────────────────────────┘  ║")
+        
+    lines.append("╚══════════════════════════════════════════════════════════════════════════════════════════════╝")
+
+    full_msg = "\n" + "\n".join(lines)
+    _emit(logging.INFO, full_msg)
+
+
+_TraceLogger.log_production_summary = staticmethod(log_production_summary)
 trace_logger = _TraceLogger()

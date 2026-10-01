@@ -117,6 +117,12 @@
       المستخدمون
     </a>
 
+    <a href="{{ url_for('health.health_dashboard') }}"
+       class="nav-item {% if request.endpoint in ['health.health_dashboard'] %}active{% endif %}">
+      <i data-lucide="activity" class="nav-icon"></i>
+      صحة النظام والموارد
+    </a>
+
   </nav>
 
   <div class="sidebar-footer">

@@ -250,6 +250,12 @@ def send_visit_confirmation_email(
                     # db.session.commit() # Save if DB model
             except RefreshError as refresh_err:
                 logger.error("[NotificationCenter] Refresh token expired/revoked: %s", refresh_err)
+                send_production_alert(
+                    subject="Gmail OAuth Refresh Token Failure",
+                    body_or_error=refresh_err,
+                    context={"reference_id": reference_id, "recipient": recipient},
+                    level="ERROR"
+                )
                 return False
 
         gmail_service = build("gmail", "v1", credentials=creds)
@@ -274,4 +280,10 @@ def send_visit_confirmation_email(
 
     except Exception as e:
         logger.exception("[NotificationCenter] Failed to send home visit notification: %s", e)
+        send_production_alert(
+            subject=f"Home Visit Notification Delivery Failure (#{reference_id})",
+            body_or_error=e,
+            context={"reference_id": reference_id, "patient_name": name, "phone": phone},
+            level="ERROR"
+        )
         return False

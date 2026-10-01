@@ -155,9 +155,19 @@ class SubscriptionService:
                 count, cost, getattr(subscription, "laboratory_id", None), subscription.message_used
             )
             return True
-        except Exception:
+        except Exception as e:
             db.session.rollback()
             logger.exception("[SubscriptionService.consume] Error")
+            try:
+                from notification_center import send_production_alert
+                send_production_alert(
+                    subject="Subscription Deduction Database Failure",
+                    body_or_error=e,
+                    context={"laboratory_id": self.laboratory_id, "count": count, "cost": cost},
+                    level="ERROR"
+                )
+            except Exception:
+                pass
             return False
 
     # ==========================================================

@@ -4,6 +4,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
 from config import Config
+from notification_center import send_production_alert
 from utils.embedding_utils import build_embedding_text, create_embedding
 
 logger = logging.getLogger(__name__)
@@ -13,16 +14,24 @@ qdrant_client = QdrantClient(url=Config.QDRANT_URL, api_key=Config.QDRANT_API_KE
 
 def initialize_collection() -> None:
     """يجهّز الـ Collection في Qdrant لو مش موجود."""
-    existing = {c.name for c in qdrant_client.get_collections().collections}
-    if Config.COLLECTION_NAME in existing:
-        logger.info("Collection '%s' already exists.", Config.COLLECTION_NAME)
-        return
+    try:
+        existing = {c.name for c in qdrant_client.get_collections().collections}
+        if Config.COLLECTION_NAME in existing:
+            logger.info("Collection '%s' already exists.", Config.COLLECTION_NAME)
+            return
 
-    qdrant_client.create_collection(
-        collection_name=Config.COLLECTION_NAME,
-        vectors_config=VectorParams(size=Config.VECTOR_SIZE, distance=Distance.COSINE),
-    )
-    logger.info("Collection '%s' created successfully.", Config.COLLECTION_NAME)
+        qdrant_client.create_collection(
+            collection_name=Config.COLLECTION_NAME,
+            vectors_config=VectorParams(size=Config.VECTOR_SIZE, distance=Distance.COSINE),
+        )
+        logger.info("Collection '%s' created successfully.", Config.COLLECTION_NAME)
+    except Exception as e:
+        logger.exception("Qdrant collection initialization failed")
+        send_production_alert(
+            subject="Qdrant Initialization Failure",
+            body_or_error=e,
+            context={"collection_name": Config.COLLECTION_NAME, "qdrant_url": Config.QDRANT_URL},
+        )
 
 
 def upsert_test_vector(test_id: int, test_name: str, description: str, keywords: list[str]) -> bool:
@@ -51,8 +60,13 @@ def upsert_test_vector(test_id: int, test_name: str, description: str, keywords:
             points=[PointStruct(id=test_id, vector=vector, payload=payload)],
             wait=True,
         )
-    except Exception:
+    except Exception as e:
         logger.exception("Qdrant upsert failed for test %s", test_id)
+        send_production_alert(
+            subject=f"Qdrant Upsert Failure (Test ID: {test_id})",
+            body_or_error=e,
+            context={"test_id": test_id, "test_name": test_name},
+        )
         raise
 
     logger.info("Test with ID %s upserted successfully into Qdrant.", test_id)
@@ -66,8 +80,13 @@ def delete_test_vector(test_id: int) -> bool:
             collection_name=Config.COLLECTION_NAME,
             points_selector=[test_id],
         )
-    except Exception:
+    except Exception as e:
         logger.exception("Qdrant delete failed for test %s", test_id)
+        send_production_alert(
+            subject=f"Qdrant Delete Failure (Test ID: {test_id})",
+            body_or_error=e,
+            context={"test_id": test_id},
+        )
         raise
 
     logger.info("Test with ID %s deleted from Qdrant.", test_id)
@@ -81,8 +100,13 @@ def get_test_vector(test_id: int):
             collection_name=Config.COLLECTION_NAME,
             ids=[test_id],
         )
-    except Exception:
+    except Exception as e:
         logger.exception("Qdrant retrieve failed for test %s", test_id)
+        send_production_alert(
+            subject=f"Qdrant Retrieve Failure (Test ID: {test_id})",
+            body_or_error=e,
+            context={"test_id": test_id},
+        )
         raise
 
     if not result:

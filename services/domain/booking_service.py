@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from models.models import Booking, Status, db
 from services.domain.ticket_service import generate_booking_img
 from utils.text_utils import make_reference_id
+from utils.excel_utils import format_excel_sheet
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ class BookingService:
         )
 
     def export_to_excel(self, search, status, date_from, date_to):
-        """Generate an in-memory Excel workbook using the booking filters."""
+        """Generate an in-memory Excel workbook using the booking filters with premium formatting."""
         pagination, _ = self.display_bookings(
             page=1,
             per_page=99999,
@@ -219,29 +220,31 @@ class BookingService:
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Bookings"
 
-        ws.append([
+        headers = [
+            "الرقم المرجعي",
             "الاسم",
             "رقم الهاتف",
             "العنوان",
             "التفاصيل",
-            "التاريخ",
+            "تاريخ الزيارة",
             "الوقت",
             "المنصة",
-            "وقت إنشاء الحجز",
+            "وقت الإنشاء",
             "الحالة",
-        ])
+        ]
 
+        rows = []
         for booking in pagination.items:
-            ws.append([
+            rows.append([
+                booking.reference_id or f"#{booking.id}",
                 booking.name,
                 booking.phone_number,
                 booking.address,
                 booking.details,
                 booking.date,
                 booking.time,
-                booking.comes_from,
+                booking.comes_from or "غير محدد",
                 (
                     booking.booking_time.strftime("%Y-%m-%d %H:%M")
                     if booking.booking_time
@@ -249,6 +252,14 @@ class BookingService:
                 ),
                 booking.status.value if booking.status else "",
             ])
+
+        format_excel_sheet(
+            ws,
+            title="الحجوزات المنزلية",
+            headers=headers,
+            rows=rows,
+            status_col_idx=10,  # 10th column is Status
+        )
 
         output = BytesIO()
         wb.save(output)

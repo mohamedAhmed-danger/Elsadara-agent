@@ -9,7 +9,7 @@ from services.messaging.client_service import ClientService
 from services.domain.page_service import PageService
 from utils.history_utils import format_chat_history
 from utils.request_profiler import RequestProfiler
-from utils.usage_calculator import calc_total_usage
+from utils.usage_calculator import calc_total_usage, check_and_alert_high_token_usage
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ def run_agent(
     laboratory_id: لو المستدعي عارفه (webhook_service) بيتبعت عشان نوفر استعلام.
     لو مش متبعت، بنجيبه من الـ page.
     """
+    t_start = time.perf_counter()
     t0 = time.perf_counter()
     client_service = ClientService(
         platform_id=message.platform_id,
@@ -76,7 +77,8 @@ def run_agent(
     _send_booking_email(result)
 
     booking_ref = result.get("booking_reference") or result.get("visit_reference")
-    _log_completed(message, result, response_obj, usage, booking_ref)
+    duration = time.perf_counter() - t_start
+    _log_completed(message, result, response_obj, usage, booking_ref, duration=duration)
 
     return response_obj.response, result.get("booking_pdf"), booking_ref
 
@@ -122,9 +124,20 @@ def _build_state(message: IncomingMessage, client, laboratory_id, history_rows) 
 
 
 def _record_usage(message: IncomingMessage, result: dict, ocr_usage: dict | None) -> dict | None:
-    """يحسب الاستهلاك للتسجيل فقط دون تخصيم من الاشتراك."""
+    """يحسب الاستهلاك للتسجيل ويتحقق من تجاوز حد 40,000 توكن لإرسال تنبيه."""
     try:
         usage = calc_total_usage(result, ocr_usage=ocr_usage)
+        if usage:
+            check_and_alert_high_token_usage(
+                usage,
+                context={
+                    "sender_id": message.sender_id,
+                    "platform": message.platform_name or str(message.platform_id),
+                    "page_id": message.page_id,
+                    "user_message": message.text or "",
+                },
+                threshold=40000,
+            )
         return usage
     except Exception as e:
         logger.exception(
@@ -198,6 +211,8 @@ def _log_completed(
     response_obj,
     usage: dict | None,
     booking_ref: str | None,
+    duration: float = 0.0,
+    ocr_result: dict | None = None,
 ) -> None:
     logger.info(
         "[run_agent] Completed | sender_id=%s intent=%s reply_len=%d has_booking_pdf=%s "
@@ -217,3 +232,21 @@ def _log_completed(
                 node, u["input"], u["output"], u["cost_usd"],
             )
         logger.debug("[run_agent] Reply | %s", response_obj.response)
+
+    # 📊 Emit clean production summary box & token table
+    try:
+        from utils.trace_logger import trace_logger
+        trace_logger.log_production_summary(
+            sender_id=message.sender_id,
+            platform_name=message.platform_name or str(message.platform_id),
+            page_id=message.page_id,
+            user_message=message.text or "",
+            detected_intent=result.get("intent"),
+            chat_summary=result.get("summary"),
+            bot_response=response_obj.response,
+            usage=usage,
+            ocr_result=ocr_result,
+            duration=duration,
+        )
+    except Exception as exc:
+        logger.exception("[run_agent] Production summary formatting failed: %s", exc)

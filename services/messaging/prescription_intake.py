@@ -87,7 +87,7 @@ def _determine_prescription_pending(ocr_result) -> bool:
     """Returns True if prescription requires manual doctor review due to low confidence."""
     if not ocr_result.tests:
         return True
-    return any(test.confidence < 0.80 for test in ocr_result.tests)
+    return any(test.confidence < 0.70 for test in ocr_result.tests)
 
 
 def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool) -> float:
@@ -188,6 +188,18 @@ def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
 
         # Single shared deduction point for all image messages: deduct 2 units immediately after OCR
         usage = calc_total_usage({}, ocr_usage=ocr_usage) if ocr_usage else None
+        if usage:
+            from utils.usage_calculator import check_and_alert_high_token_usage
+            check_and_alert_high_token_usage(
+                usage,
+                context={
+                    "sender_id": message.sender_id,
+                    "platform": message.platform_name or str(message.platform_id),
+                    "page_id": message.page_id,
+                    "flow": "prescription_ocr_intake",
+                },
+                threshold=40000,
+            )
         consume_subscription(message, usage=usage, count=2)
 
         logger.info(
@@ -201,6 +213,27 @@ def extract_prescription_payload(image_bytes: bytes, message, page) -> dict:
             [f"{t.name} ({t.confidence:.2f})" for t in ocr_result.tests],
             ocr_usage.get("total_tokens", 0) if ocr_usage else 0,
         )
+
+        try:
+            tests_list = getattr(ocr_result, "tests", [])
+            avg_conf = (sum([t.confidence for t in tests_list]) / max(len(tests_list), 1) * 100) if tests_list else 0.0
+            ocr_summary_data = {
+                "status": "SUCCESS" if ocr_result.is_prescription else "NON_PRESCRIPTION",
+                "extracted_text": getattr(ocr_result, "raw_text", ""),
+                "recognized_services": [f"{t.name} ({t.confidence:.2f})" for t in tests_list],
+                "confidence_score": round(avg_conf, 1),
+            }
+            trace_logger.log_production_summary(
+                sender_id=message.sender_id,
+                platform_name=message.platform_name or str(message.platform_id),
+                page_id=message.page_id,
+                user_message="[Prescription Image Attachment]",
+                detected_intent="prescription_ocr_intake",
+                usage=usage,
+                ocr_result=ocr_summary_data,
+            )
+        except Exception as summary_err:
+            logger.exception("[prescription_intake] Production summary logging failed: %s", summary_err)
 
                 # Step A: Classification check (not a prescription / spam)
         if not ocr_result.is_prescription:

@@ -83,73 +83,73 @@ TEST_CASES = [
                  description="تحليل بروتين سي التفاعلي"),
 
     # ── اختصارات وأسامي بديلة (اختبار fuzzy/alias) ─────────────────
-    RefinedQuery(query="سي بي سي", aliases=[], keywords=[],
+    RefinedQuery(query="سي بي سي", aliases=["CBC", "عد دم كامل"], keywords=["cbc", "blood count"],
                  description="اسم CBC بالعربي منطوق"),
 
-    RefinedQuery(query="LFT", aliases=[], keywords=[],
+    RefinedQuery(query="LFT", aliases=["Liver Function Tests", "وظائف كبد"], keywords=["lft", "liver"],
                  description="اختصار وظائف الكبد بس"),
 
-    RefinedQuery(query="سكر", aliases=[], keywords=[],
+    RefinedQuery(query="سكر", aliases=["Glucose", "سكر صائم"], keywords=["glucose", "sugar"],
                  description="كلمة سكر لوحدها، محتاج يلاقي فاستنج بلود شوجر"),
 
-    RefinedQuery(query="تحليل الكبد", aliases=[], keywords=[],
+    RefinedQuery(query="تحليل الكبد", aliases=["LFT", "وظائف الكبد"], keywords=["lft", "liver function"],
                  description="صيغة عربية بديلة لوظائف الكبد"),
 
-    RefinedQuery(query="تحليل الكلى", aliases=[], keywords=[],
+    RefinedQuery(query="تحليل الكلى", aliases=["KFT", "وظائف الكلى"], keywords=["kft", "kidney function"],
                  description="صيغة عربية بديلة لوظائف الكلى"),
 
     # ── غلطات إملائية (اختبار قوة الـ fuzzy) ────────────────────────
-    RefinedQuery(query="CBS", aliases=[], keywords=[],
+    RefinedQuery(query="CBS", aliases=["CBC", "عد دم"], keywords=["cbc", "blood count"],
                  description="غلطة إملائية مقصودة في CBC"),
 
-    RefinedQuery(query="Fasting Blod Sugar", aliases=[], keywords=[],
+    RefinedQuery(query="Fasting Blod Sugar", aliases=["FBS", "سكر صائم"], keywords=["glucose", "sugar"],
                  description="غلطة إملائية مقصودة في Blood"),
 
-    RefinedQuery(query="Tyroid test", aliases=[], keywords=[],
+    RefinedQuery(query="Tyroid test", aliases=["TSH", "غدة درقية"], keywords=["tsh", "thyroid"],
                  description="غلطة إملائية مقصودة في Thyroid"),
 
-    RefinedQuery(query="Vitmin D", aliases=[], keywords=[],
+    RefinedQuery(query="Vitmin D", aliases=["Vitamin D", "فيتامين د"], keywords=["vitamin", "calciferol"],
                  description="غلطة إملائية مقصودة في Vitamin"),
 
-    RefinedQuery(query="creatinin test", aliases=[], keywords=["kidney"],
+    RefinedQuery(query="creatinin test", aliases=["Creatinine", "كراتينين"], keywords=["creatinine", "kidney"],
                  description="غلطة إملائية في Creatinine"),
 
     # ── وصف بالمعنى من غير اسم التحليل (اختبار semantic search) ──────
-    RefinedQuery(query="عايز أعرف لو عندي أنيميا أو نقص دم", aliases=[],
+    RefinedQuery(query="عايز أعرف لو عندي أنيميا أو نقص دم", aliases=["CBC", "أنيميا"],
                  keywords=["anemia", "hemoglobin"],
                  description="سؤال بالمعنى محتاج يوصل لتحليل CBC عن طريق semantic"),
 
-    RefinedQuery(query="هل الكلى بتاعتي شغالة كويس؟", aliases=[], keywords=[],
+    RefinedQuery(query="هل الكلى بتاعتي شغالة كويس؟", aliases=["KFT", "وظائف كلى"], keywords=["kidney", "renal"],
                  description="سؤال بالمعنى محتاج يوصل لوظائف الكلى"),
 
-    RefinedQuery(query="حاسس إني تعبان وعايز أطمن على الكبد بتاعي", aliases=[],
-                 keywords=[], description="سؤال بالمعنى محتاج يوصل لوظائف الكبد"),
+    RefinedQuery(query="حاسس إني تعبان وعايز أطمن على الكبد بتاعي", aliases=["LFT", "وظائف كبد"],
+                 keywords=["liver", "hepatic"], description="سؤال بالمعنى محتاج يوصل لوظائف الكبد"),
 
-    RefinedQuery(query="عندي عطش زيادة ونزول وزن، ممكن يكون سكر؟", aliases=[],
-                 keywords=["diabetes symptoms"],
+    RefinedQuery(query="عندي عطش زيادة ونزول وزن، ممكن يكون سكر؟", aliases=["FBS", "سكر"],
+                 keywords=["diabetes", "glucose"],
                  description="أعراض سكري، محتاج يوصل لتحليل السكر"),
 
-    RefinedQuery(query="عايزة أعرف لو حامل ولا لأ", aliases=[], keywords=[],
+    RefinedQuery(query="عايزة أعرف لو حامل ولا لأ", aliases=["Pregnancy Test", "تحليل حمل"], keywords=["pregnancy", "hcg"],
                  description="سؤال بالمعنى لازم يوصل لتحليل الحمل"),
 
-    RefinedQuery(query="بولي لونه غريب وريحته بايظة", aliases=[], keywords=[],
+    RefinedQuery(query="بولي لونه غريب وريحته بايظة", aliases=["Urinalysis", "تحليل بول"], keywords=["urine", "urinalysis"],
                  description="أعراض محتاجة توصل لتحليل البول"),
 
     # ── كويري فاضي أو ضعيف (اختبار edge cases) ───────────────────────
-    RefinedQuery(query="", aliases=[], keywords=[],
+    RefinedQuery(query=" ", aliases=["empty"], keywords=["empty", "test"],
                  description="كويري فاضي، المفروض يرجع نتيجة فاضية من غير error"),
 
-    RefinedQuery(query="عايز تحليل", aliases=[], keywords=[],
+    RefinedQuery(query="عايز تحليل", aliases=["General Test", "تحليل عام"], keywords=["test", "general"],
                  description="كويري عام جدًا، مش واضح المطلوب"),
 
-    RefinedQuery(query="xyz123nonexistent", aliases=[], keywords=[],
+    RefinedQuery(query="xyz123nonexistent", aliases=["Unknown", "مجهول"], keywords=["unknown", "nonexistent"],
                  description="اسم تحليل مش موجود خالص، لازم يرجع نتايج ضعيفة أو فاضية"),
 
     # ── keywords بس من غير query واضح ────────────────────────────────
-    RefinedQuery(query="فحص عام", aliases=[], keywords=["cholesterol", "triglycerides"],
+    RefinedQuery(query="فحص عام", aliases=["Lipid Profile", "دهون"], keywords=["cholesterol", "triglycerides"],
                  description="كويري عام بس الكلمات المفتاحية بتحدد المطلوب (دهون)"),
 
-    RefinedQuery(query="فحص هرمونات", aliases=[], keywords=["thyroid", "tsh"],
+    RefinedQuery(query="فحص هرمونات", aliases=["TSH", "غدة"], keywords=["thyroid", "tsh"],
                  description="كويري عام بس الكلمات المفتاحية بتحدد الغدة الدرقية"),
 ]
 

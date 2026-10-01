@@ -83,3 +83,39 @@ def calc_total_usage(result: dict, ocr_usage: dict = None) -> dict:
         "total_cost_cents": total_cost_cents,
         "req_per_dollar":   req_per_dollar,
     }
+
+
+def check_and_alert_high_token_usage(usage: dict, context: dict = None, threshold: int = 40000) -> bool:
+    """
+    Checks if total LLM tokens for a request/session exceed the specified threshold (default: 40,000).
+    If threshold is reached or exceeded, sends a production email alert via NotificationCenter.
+    """
+    if not usage or not isinstance(usage, dict):
+        return False
+
+    total_tokens = usage.get("total_tokens", 0)
+    if total_tokens >= threshold:
+        try:
+            from notification_center import send_production_alert
+            alert_context = {
+                "total_tokens": f"{total_tokens:,}",
+                "total_input": f"{usage.get('total_input', 0):,}",
+                "total_output": f"{usage.get('total_output', 0):,}",
+                "estimated_cost_usd": f"${usage.get('total_cost_usd', 0.0):.4f}",
+                "token_threshold": f"{threshold:,}",
+            }
+            if context and isinstance(context, dict):
+                alert_context.update(context)
+
+            send_production_alert(
+                subject=f"⚠️ High LLM Token Consumption Alert ({total_tokens:,} Tokens)",
+                body_or_error=f"A request execution consumed {total_tokens:,} LLM tokens, exceeding the alert threshold of {threshold:,} tokens.",
+                context=alert_context,
+                level="WARNING",
+            )
+            logger.warning("[HighTokenAlert] Exceeded threshold (%d >= %d) | Alert sent", total_tokens, threshold)
+            return True
+        except Exception as err:
+            logger.exception("[HighTokenAlert] Failed to send high token alert: %s", err)
+            return False
+    return False

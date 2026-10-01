@@ -18,20 +18,39 @@ from routes.page_routes import pages_bp
 from routes.gmail_routes import gmail_auth_bp
 from routes.webhook_routes import webhook_bp
 from routes.bundle_routes import bundle_bp
+from routes.health_routes import health_bp
 
 
 import logging
+from logging.handlers import RotatingFileHandler
+import os
 
-# إجبار النظام إنه يطبع كل الـ INFO Logs
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    force=True  # 👈 السطر ده بيلغي حجب المكتبات التانية للـ Logs
-)
+def setup_app_logging(app):
+    log_level = getattr(logging, app.config.get("LOG_LEVEL", "DEBUG").upper(), logging.DEBUG)
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        force=True
+    )
+    log_dir = os.path.join(os.getcwd(), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+
+    if not any(isinstance(h, RotatingFileHandler) for h in app.logger.handlers):
+        file_handler = RotatingFileHandler(
+            os.path.join(log_dir, "elsadara.log"),
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8"
+        )
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+        app.logger.addHandler(file_handler)
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    setup_app_logging(app)
 
     # تأكيد وجود secret_key للـ Sessions (لو مش محدد في Config)
     if not app.config.get("SECRET_KEY"):
@@ -66,6 +85,7 @@ def create_app(config_class=Config):
     app.register_blueprint(gmail_auth_bp)
     app.register_blueprint(webhook_bp)
     app.register_blueprint(bundle_bp)
+    app.register_blueprint(health_bp)
 
     # Context processor for sidebar badges and layout counters
     @app.context_processor
