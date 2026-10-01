@@ -70,7 +70,12 @@ OCR_SYSTEM_PROMPT = (
     "3. Extract all requested laboratory tests / diagnostic investigations into `tests`.\n"
     "4. For each test, provide its `name` and an individual `confidence` score (0.0 to 1.0) "
     "reflecting the clarity and legibility of that specific test's handwriting/text.\n"
-    "5. Do NOT extract patient info, doctor info, medications, notes, or instructions."
+    "5. Do NOT extract patient info, doctor info, medications, notes, or instructions.\n\n"
+    "CRITICAL HANDWRITING & NOISE-REDUCTION RULES:\n"
+    "- Ignore Pre-printed Paper Branding: Ignore medical pad logos, pharmaceutical drug brand names printed on the header/footer, or table lines on the notepad paper.\n"
+    "- Handle Lines & Scribbles: Ignore decorative underlines, stray pen marks, background noise, or paper stains. Pay attention to lines or checkmarks ONLY if they explicitly cross out a test (canceled) or check/circle a specific item.\n"
+    "- Medical Context Awareness: Leverage standard medical context to decode cursive handwriting and common medical lab abbreviations (e.g., 'TSH', 'FBS', 'Lipid Profile', 'CBC'). However, do NOT hallucinate tests that are not present.\n"
+    "- Unreadable Text: If a handwritten test name is completely illegible or heavily crossed out, assign a low confidence score (< 0.4) and do not force an inaccurate guess."
 )
 
 

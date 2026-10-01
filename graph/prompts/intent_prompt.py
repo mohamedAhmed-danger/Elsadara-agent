@@ -86,6 +86,11 @@ HOW to generate:
 - Do not change the specificity of what the user requested.
   Single Test != Panel != Package. Never replace a specific test with a
   broader panel/package, or vice versa.
+- The `query` field MUST be a test name, panel name, or bundle name only.
+- Keep `query` short and directly searchable.
+- NEVER include explanations, medical purposes, symptoms, preparation,
+  or what the test measures inside `query`.
+- Preserve the exact specificity requested by the patient.  
 - Organ/system requests (e.g., "اطمن على الكبد", "Check liver"):
   the user made ONE request, so create ONE RefinedQuery for the organ's
   standard function panel (e.g., "Liver Function Tests"), and include
@@ -106,9 +111,17 @@ REFINED QUERY FIELDS & MULTILINGUAL RULES
 Each RefinedQuery must contain (all non-empty):
 
 - query:
-  A concise, standardized English semantic description of the requested
-  test and what it measures
-  (e.g., "Fasting Blood Sugar test measuring baseline glucose levels after 8 hours of fasting").
+  The standardized test name only. Do NOT write a semantic description,
+  explanation, purpose, or what the test measures.
+  Use the most commonly recognized English medical name for the exact test.
+
+  Examples:
+  CBC
+  Fasting Blood Sugar
+  TSH
+  Vitamin D
+  Liver Function Tests
+  Ferritin
 
 - aliases:
   Alternative names, medical abbreviations, Arabic translations, or

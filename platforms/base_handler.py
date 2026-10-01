@@ -45,7 +45,7 @@ class BaseHandler:
 
             result = extract_prescription_payload(image_bytes, message, self.page)
             if result["mode"] == "agent":
-                return PrepareResult("agent_text", result["text"], result["ocr_usage"],result.get(image_result))
+                return PrepareResult("agent_text", result["text"], result["ocr_usage"],result.get("image_result"))
             return PrepareResult("immediate", result["reply"], result.get("pdf"))
 
         logger.info("[PREPARE] Unsupported message type=%s -> immediate response", message.type)
@@ -53,12 +53,13 @@ class BaseHandler:
 
     def _handle_media(self, msg_type: str) -> str:
         responses = {
-            "video":    "برجاء إرسال رسالة نصية بدلاً من الفيديو.",
-            "audio":    "برجاء إرسال رسالة نصية بدلاً من الملف الصوتي.",
-            "voice":    "برجاء إرسال رسالة نصية بدلاً من الرسالة الصوتية.",
-            "location": "📍 تم استلام الموقع.",
+            "video":    "عذرًا، نقبل الرسائل النصية والصور فقط 📸\nيرجى كتابة استفسارك أو إرسال صورة.",
+            "audio":    "عذرًا، نقبل الرسائل النصية والصور فقط 📸\nيرجى كتابة استفسارك أو إرسال صورة.",
+            "voice":    "عذرًا، نقبل الرسائل النصية والصور فقط 📸\nيرجى كتابة استفسارك أو إرسال صورة.",
+            "document": "عذرًا، نقبل الرسائل النصية والصور فقط 📸\nيرجى كتابة استفسارك أو إرسال صورة.",
+            "location": "📍 تم استلام الموقع بنجاح.", # لو اللوكيشن شغال معاك، سيبه زي ما هو
         }
-        return responses.get(msg_type, "برجاء إرسال رسالة نصية.")
+        return responses.get(msg_type, "عذرًا، نقبل الرسائل النصية والصور فقط 📸")
 
     # ── abstract interface: كل هاندلر لازم يعمل override ────────────────────────
 

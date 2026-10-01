@@ -39,7 +39,7 @@ def result_node(state: AgentState) -> dict:
     )
 
     # جلب رقم خدمة العملاء من Config أو استخدام الرقم المباشر
-    phone_number = getattr(Config, "CUSTOMER_SERVICE_PHONE", "01208140037")
+    phone_number = getattr(Config, "CUSTOMER_SERVICE_PHONE", "20 100 644 6508")
 
     result_text = f"""
 📋 للاستعلام عن نتيجة التحاليل والحصول عليها:

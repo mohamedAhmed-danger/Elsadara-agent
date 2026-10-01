@@ -38,6 +38,9 @@ class Config:
     OCR_MODEl = OCR_MODEL  
     LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL")    
+
     
     
     FEEDBACK_BASE_URL = os.getenv("FEEDBACK_BASE_URL")

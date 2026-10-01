@@ -41,7 +41,7 @@ CLINIC_LINE_2 = "للتحاليل الطبية الكيميائية"
 
 # ── font & assets ─────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_BASE_DIR = os.path.dirname(_HERE)
+_BASE_DIR = os.path.dirname(os.path.dirname(_HERE))   
 
 _FONT_CANDIDATES = [
     os.path.join(_BASE_DIR, "utils", "Cairo.ttf"),

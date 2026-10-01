@@ -328,6 +328,7 @@ def process_conversation(
             handler = get_handler(platform_id, page)
 
             combined_text = build_agent_text(entries)
+            logger.info("[DEBUG agent_text]\n%s", combined_text)
 
             if not combined_text:
                 _require_ownership(r, conversation_key, owner_token, heartbeat_script)

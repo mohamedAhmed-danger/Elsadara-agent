@@ -131,9 +131,19 @@ Last bot message:
 
         fallback = detect_language_fallback(
             user_message,
-            arabic="عذرًا، حدث خطأ مؤقت. حاول مرة أخرى.",
-            default="Sorry, a temporary error occurred. Please try again.",
-        )
+            arabic=(
+                   f"عذرًا، حدث خطأ مؤقت أثناء معالجة طلبك ⚠️\n\n"
+                   f"يرجى المحاولة مرة أخرى بعد قليل، أو يمكنك التواصل مباشرة مع خدمة عملاء معامل الصدارة لمساعدتك فوراً عبر الرقم:\n"
+                   f"📞 **01006446508**\n\n"
+                   f"نحن في خدمتك دائمًا ✨"
+                   ),
+            default=(
+                    f"Apologies, a temporary error occurred while processing your request ⚠️\n\n"
+                    f"Please try again in a moment, or contact El Sadara Labs customer service directly for assistance at:\n"
+                    f"📞 **01006446508**\n\n"
+                    f"We are always happy to help! ✨"
+                    ),
+              )
 
         return {
             "response": fallback,
@@ -208,21 +218,18 @@ Last bot message:
             reply = detect_language_fallback(
                 user_message,
                 arabic=(
-                    f"تم تأكيد حجزك بنجاح ✅\n"
-                    f"رقم الطلب: *{booking_reference}*\n\n"
-                    f"هيتم التواصل معاك من فريق خدمة العملاء "
-                    f"لتأكيد المعاد نهائيًا.\n"
-                    f"وده تذكرة الحجز 🎫"
+                    f"تم استلام طلب حجزك بنجاح ✅\n\n"
+                    f"📌 **رقم الطلب:** *{booking_reference}*\n\n"
+                    f"سيقوم فريق خدمة العملاء بمعامل الصدارة بالتواصل معك قريباً لتأكيد الموعد النهائي.\n\n"
+                    f"مرفق أدناه تذكرة الحجز الخاصة بك 🎫"
                 ),
                 default=(
-                    f"Your booking has been confirmed ✅\n"
-                    f"Reference: *{booking_reference}*\n\n"
-                    f"Our customer service team will contact you "
-                    f"to confirm the final appointment time.\n"
-                    f"Here's your booking ticket 🎫"
+                    f"Your booking request has been successfully received ✅\n\n"
+                    f"📌 **Reference ID:** *{booking_reference}*\n\n"
+                    f"Our customer service team at El Sadara Labs will contact you shortly to confirm the final appointment.\n\n"
+                    f"Here is your booking ticket below 🎫"
                 ),
             )
-
             updated_summary = (
               f"{current_summary}\n\n"
               f"--- BOOKING STATUS UPDATE ---\n"

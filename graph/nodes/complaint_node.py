@@ -93,9 +93,19 @@ RECENT CONVERSATION
 
         fallback = detect_language_fallback(
             user_message,
-            arabic="عذرًا، حدث خطأ مؤقت. حاول مرة أخرى.",
-            default="Sorry, a temporary error occurred. Please try again.",
-        )
+            arabic=(
+                   f"عذرًا، حدث خطأ مؤقت أثناء معالجة طلبك ⚠️\n\n"
+                   f"يرجى المحاولة مرة أخرى بعد قليل، أو يمكنك التواصل مباشرة مع خدمة عملاء معامل الصدارة لمساعدتك فوراً عبر الرقم:\n"
+                   f"📞 **01006446508**\n\n"
+                   f"نحن في خدمتك دائمًا ✨"
+                   ),
+            default=(
+                    f"Apologies, a temporary error occurred while processing your request ⚠️\n\n"
+                    f"Please try again in a moment, or contact El Sadara Labs customer service directly for assistance at:\n"
+                    f"📞 **01006446508**\n\n"
+                    f"We are always happy to help! ✨"
+                    ),
+              )
 
         return {
             "response": fallback,
