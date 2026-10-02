@@ -233,7 +233,8 @@ def send_visit_confirmation_email(
             f"Source: {comes_from}\n"
         )
         subject = f"New Home Visit Booking - #{reference_id}"
-        recipient = settings.notification_email
+        # Parse comma-separated recipients
+        recipients = [r.strip() for r in settings.notification_email.split(",") if r.strip()]
 
         # Setup credentials
         SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
@@ -253,29 +254,28 @@ def send_visit_confirmation_email(
                 send_production_alert(
                     subject="Gmail OAuth Refresh Token Failure",
                     body_or_error=refresh_err,
-                    context={"reference_id": reference_id, "recipient": recipient},
+                    context={"reference_id": reference_id, "recipients": recipients},
                     level="ERROR"
                 )
                 return False
 
         gmail_service = build("gmail", "v1", credentials=creds)
 
-        # Create message
-        message = (
-            f"To: {recipient}\r\n"
-            f"Subject: {subject}\r\n"
-            f"\r\n"
-            f"{email_body}"
-        )
-        raw_message = base64.urlsafe_b64encode(message.encode("utf-8")).decode("utf-8")
+        # Send email to each recipient
+        for recipient in recipients:
+            message = (
+                f"To: {recipient}\r\n"
+                f"Subject: {subject}\r\n"
+                f"\r\n"
+                f"{email_body}"
+            )
+            raw_message = base64.urlsafe_b64encode(message.encode("utf-8")).decode("utf-8")
+            gmail_service.users().messages().send(
+                userId="me",
+                body={"raw": raw_message},
+            ).execute()
 
-        # Send email
-        gmail_service.users().messages().send(
-            userId="me",
-            body={"raw": raw_message},
-        ).execute()
-
-        logger.info("[NotificationCenter] Booking email sent successfully to %s", recipient)
+        logger.info("[NotificationCenter] Booking email sent successfully to %s", recipients)
         return True
 
     except Exception as e:
@@ -284,6 +284,92 @@ def send_visit_confirmation_email(
             subject=f"Home Visit Notification Delivery Failure (#{reference_id})",
             body_or_error=e,
             context={"reference_id": reference_id, "patient_name": name, "phone": phone},
+            level="ERROR"
+        )
+        return False
+
+
+def send_pending_prescription_email(
+    inquiry_id: int,
+    comes_from: str,
+    confidence_score: float,
+    extracted_tests: str,
+    ocr_extracted_text: str = "",
+) -> bool:
+    """
+    Sends an email alert when a prescription is saved with PENDING status
+    (low OCR confidence requiring manual doctor review).
+    Uses the same Gmail API flow as send_visit_confirmation_email.
+    """
+    try:
+        # Fetch default tenant settings
+        settings = TenantService.get_tenant_settings("default_tenant")
+
+        if not settings or not settings.notification_email or not settings.gmail_token_json:
+            logger.error("[NotificationCenter] Missing settings, email, or token for pending prescription notification.")
+            return False
+
+        # Build email body
+        email_body = (
+            f"⚠️ New Pending Prescription – Doctor Review Required\n\n"
+            f"Inquiry ID: {inquiry_id}\n"
+            f"Source: {comes_from}\n"
+            f"OCR Confidence: {confidence_score:.2f}\n"
+            f"Extracted Tests: {extracted_tests or 'None detected'}\n"
+            f"OCR Raw Text: {ocr_extracted_text or 'N/A'}\n\n"
+            f"This prescription has low OCR confidence and requires manual review.\n"
+            f"Please log in to the dashboard to review and confirm the required tests.\n"
+        )
+        subject = f"⚠️ Pending Prescription Review – Inquiry #{inquiry_id}"
+        # Parse comma-separated recipients
+        recipients = [r.strip() for r in settings.notification_email.split(",") if r.strip()]
+
+        # Setup credentials
+        SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
+        token_info = json.loads(settings.gmail_token_json)
+        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+
+        # 🛠️ Refresh token handling
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                if hasattr(settings, 'gmail_token_json'):
+                    settings.gmail_token_json = creds.to_json()
+            except RefreshError as refresh_err:
+                logger.error("[NotificationCenter] Refresh token expired/revoked: %s", refresh_err)
+                send_production_alert(
+                    subject="Gmail OAuth Refresh Token Failure (Pending Prescription)",
+                    body_or_error=refresh_err,
+                    context={"inquiry_id": inquiry_id, "recipients": recipients},
+                    level="ERROR"
+                )
+                return False
+
+        gmail_service = build("gmail", "v1", credentials=creds)
+
+        # Send email to each recipient
+        for recipient in recipients:
+            message = (
+                f"To: {recipient}\r\n"
+                f"Subject: {subject}\r\n"
+                f"\r\n"
+                f"{email_body}"
+            )
+            raw_message = base64.urlsafe_b64encode(message.encode("utf-8")).decode("utf-8")
+            gmail_service.users().messages().send(
+                userId="me",
+                body={"raw": raw_message},
+            ).execute()
+
+        logger.info("[NotificationCenter] Pending prescription email sent successfully to %s | inquiry_id=%s", recipients, inquiry_id)
+        return True
+
+    except Exception as e:
+        logger.exception("[NotificationCenter] Failed to send pending prescription notification: %s", e)
+        send_production_alert(
+            subject=f"Pending Prescription Notification Delivery Failure (Inquiry #{inquiry_id})",
+            body_or_error=e,
+            context={"inquiry_id": inquiry_id, "comes_from": comes_from},
             level="ERROR"
         )
         return False

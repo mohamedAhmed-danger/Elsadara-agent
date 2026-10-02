@@ -9,7 +9,7 @@ from services.domain.inquiry_service import InquiryService
 from utils.usage_calculator import calc_total_usage
 from services.shared.subscription_consumer import consume_subscription
 from models.models import Status
-from notification_center import send_production_alert
+from notification_center import send_production_alert, send_pending_prescription_email
 from utils.trace_logger import trace_logger
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ def _determine_prescription_pending(ocr_result) -> bool:
     """Returns True if prescription requires manual doctor review due to low confidence."""
     if not ocr_result.tests:
         return True
-    return any(test.confidence < 0.70 for test in ocr_result.tests)
+    return any(test.confidence < 0.85 for test in ocr_result.tests)
 
 
 def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool) -> float:
@@ -95,11 +95,12 @@ def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool
     inquiry_service = InquiryService()
     min_confidence = min((t.confidence for t in ocr_result.tests), default=0.0)
     services_mentioned = ", ".join(t.name for t in ocr_result.tests) if ocr_result.tests else None
+    comes_from = f"{message.platform_name}:{message.sender_id}:{message.page_id}"
 
     inquiry_result = inquiry_service.save_inquiry(
         laboratory_id=page.laboratory_id if page else 1,
         phone_number="",
-        comes_from=f"{message.platform_name}:{message.sender_id}:{message.page_id}",
+        comes_from=comes_from,
         prescription_img=filename,
         ocr_extracted_text=ocr_result.extracted_text,
         confidence_score=min_confidence,
@@ -118,6 +119,23 @@ def _save_inquiry_record(message, page, filename: str, ocr_result, pending: bool
         success=True,
         extra={"status": Status.PENDING.value if pending else Status.REVIEWED.value, "min_confidence": min_confidence},
     )
+
+    # Send email alert for pending prescriptions (best-effort, won't block main flow)
+    if pending and inquiry_result and inquiry_result.inquiry:
+        try:
+            send_pending_prescription_email(
+                inquiry_id=inquiry_result.inquiry.id,
+                comes_from=comes_from,
+                confidence_score=min_confidence,
+                extracted_tests=services_mentioned or "",
+                ocr_extracted_text=ocr_result.extracted_text or "",
+            )
+        except Exception:
+            logger.exception(
+                "[PRESCRIPTION INTAKE] Pending prescription email failed | inquiry_id=%s",
+                inquiry_result.inquiry.id,
+            )
+
     return min_confidence
 
 

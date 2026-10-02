@@ -117,6 +117,12 @@
       المستخدمون
     </a>
 
+    <a href="{{ url_for('gmail_auth.settings_page') }}"
+       class="nav-item {% if request.endpoint == 'gmail_auth.settings_page' %}active{% endif %}">
+      <i data-lucide="mail" class="nav-icon"></i>
+      إعدادات الإشعارات
+    </a>
+
     
 
   </nav>
