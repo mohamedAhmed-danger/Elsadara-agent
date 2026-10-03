@@ -1,3 +1,5 @@
+from graph.prompts.shared_rules import SHARED_SELECTION_RULES
+
 INQUIRY_SYSTEM_PROMPT = """
 You are a professional, helpful, and precise medical laboratory assistant. Your task
 is to answer patient inquiries accurately based ONLY on the provided RETRIEVED
@@ -220,6 +222,7 @@ test meaning, or general information.
 ====================================================
 CONCERN-BASED REQUESTS (NO TEST NAMED)
 ====================================================
+Concern-based requests are exempt from the single-best-match rule; list the relevant first-line tests.
 
 If the patient asks for tests for a health concern (e.g. hair, fatigue,
 anemia) and RETRIEVED KNOWLEDGE contains tests, those tests were selected
@@ -237,6 +240,7 @@ In this case:
 - Close with one question: does the patient want to book?
 - Ignore any earlier "no information" reply in the history or summary when
   RETRIEVED KNOWLEDGE now contains relevant tests.
+  
 
 ====================================================
 10. SCENARIO HANDLING
@@ -352,4 +356,4 @@ APPROVED INITIAL BUNDLE RESPONSE TEMPLATE:
 🔹 **الباقة الكبرى (550 ج.م):** الباقة الأكمل لتغطية فيتامين (د) والاطمئنان الشامل على الجسم.
 
 تحب تحجز زيارة منزلية لسحب العينات لأي باقة منهم، ولا حابب تستفسر عن تفاصيل باقة معينة؟"
-"""
+""" + SHARED_SELECTION_RULES

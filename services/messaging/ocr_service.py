@@ -17,14 +17,23 @@ logger = logging.getLogger(__name__)
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
 
 class TestItem(BaseModel):
-    name: str
-    confidence: float = Field(ge=0.0, le=1.0)
+    name: str = Field(description="Test name as written, e.g. CBC, FBS, TSH")
+    confidence: float = Field(
+        ge=0.0, le=1.0,
+        description="Legibility of this specific entry (0.0 to 1.0)",
+    )
 
 
 class PrescriptionOCRResult(BaseModel):
-    is_prescription: bool
-    extracted_text: str
-    tests: list[TestItem]
+    is_prescription: bool = Field(
+        description="True if image is a medical prescription, doctor's order, or lab request form"
+    )
+    extracted_text: str = Field(
+        description="Visible text as written; [illegible] for unreadable parts; empty if not a prescription"
+    )
+    tests: list[TestItem] = Field(
+        description="Requested lab tests / diagnostic investigations; empty if not a prescription"
+    )
 
 
 # ── Internal Helpers ──────────────────────────────────────────────────────────
@@ -59,24 +68,27 @@ def _get_genai_client() -> genai.Client:
 
 # ── Layer 1 Public Interface ─────────────────────────────────────────────────
 
-OCR_SYSTEM_PROMPT = (
-    "You are a specialized medical OCR assistant. Your task is to analyze the provided image "
-    "and extract laboratory tests or medical investigations requested.\n\n"
-    "Instructions:\n"
-    "1. Determine `is_prescription`: true if the image is a medical prescription, doctor's order, "
-    "or laboratory requisition form. false if it is spam, a selfie, food, an unrelated document, "
-    "a receipt, or anything other than a prescription.\n"
-    "2. Transcribe the medical text into `extracted_text` exactly as written on the prescription.\n"
-    "3. Extract all requested laboratory tests / diagnostic investigations into `tests`.\n"
-    "4. For each test, provide its `name` and an individual `confidence` score (0.0 to 1.0) "
-    "reflecting the clarity and legibility of that specific test's handwriting/text.\n"
-    "5. Do NOT extract patient info, doctor info, medications, notes, or instructions.\n\n"
-    "CRITICAL HANDWRITING & NOISE-REDUCTION RULES:\n"
-    "- Ignore Pre-printed Paper Branding: Ignore medical pad logos, pharmaceutical drug brand names printed on the header/footer, or table lines on the notepad paper.\n"
-    "- Handle Lines & Scribbles: Ignore decorative underlines, stray pen marks, background noise, or paper stains. Pay attention to lines or checkmarks ONLY if they explicitly cross out a test (canceled) or check/circle a specific item.\n"
-    "- Medical Context Awareness: Leverage standard medical context to decode cursive handwriting and common medical lab abbreviations (e.g., 'TSH', 'FBS', 'Lipid Profile', 'CBC'). However, do NOT hallucinate tests that are not present.\n"
-    "- Unreadable Text: If a handwritten test name is completely illegible or heavily crossed out, assign a low confidence score (< 0.4) and do not force an inaccurate guess."
-)
+OCR_SYSTEM_PROMPT = """You are a medical document extraction assistant. Analyze the provided image and return structured data.
+
+Instructions:
+1. `is_prescription`: true if the image is a medical prescription, doctor's order, or lab/investigation request form; false otherwise. If false, return `extracted_text` as "" and `tests` as [].
+2. `extracted_text`: transcribe the visible text exactly as written. Use [illegible] for unreadable parts. Never guess. Text may be Arabic, English, or mixed: transcribe in the original language, do not translate.
+3. `tests`: list every requested laboratory test or diagnostic investigation (including imaging/ECG). Keep names as written (abbreviations stay abbreviated, e.g. CBC, FBS). Do not list the same test twice.
+4. For each test provide `name` and an individual `confidence` score (0.0 to 1.0) reflecting how legible that specific entry is.
+5. Include uncertain tests with LOW confidence instead of omitting them, so a human can review.
+6. Do NOT extract patient info, doctor info, medications, notes, or instructions into `tests`.
+
+CRITICAL HANDWRITING & NOISE-REDUCTION RULES:
+- Ignore pre-printed paper branding: pad logos, drug brand names printed in the header/footer, table lines on the paper.
+- Ignore decorative underlines, stray pen marks, background noise, and stains. Pay attention to marks ONLY if they cross out a test (exclude crossed-out tests) or tick/circle a specific item (on checkbox forms, include only ticked/circled items).
+- Strict zero-hallucination: extract ONLY tests that are explicitly and visually present in the image. Do NOT infer or add complementary tests based on medical context (e.g., do NOT extract 'HbA1c' just because 'FBS' or 'RBS' is present unless 'HbA1c' is physically written).
+- Confidence scale:
+  0.90-1.00: printed or clearly legible
+  0.70-0.89: legible handwriting, minor ambiguity
+  0.40-0.69: partially legible, plausible reading
+  0.00-0.39: mostly a guess or unreadable
+  If a test name is ambiguous, cropped, blurry, or requires medical guessing, use below 0.5.
+"""
 
 
 def analyze_prescription_image(
@@ -105,7 +117,7 @@ def analyze_prescription_image(
 
     mime_type = _detect_mime_type(image_bytes, file_path)
     client = _get_genai_client()
-    model_name = Config.OCR_MODEl
+    model_name = Config.OCR_MODEl  
 
     image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
@@ -113,69 +125,68 @@ def analyze_prescription_image(
         "🔬 [OCR] Calling Gemini model=%s | mime_type=%s | bytes_len=%d",
         model_name, mime_type, len(image_bytes),
     )
+
     trace_logger.start_pipeline("OCR PIPELINE")
-    trace_logger.step(
-        "Gemini Multimodal OCR Call",
-        input_data={
-            "model": model_name,
-            "mime_type": mime_type,
-            "image_bytes_len": len(image_bytes),
-            "source": file_path or "bytes",
-        },
-    )
+    try:
+        trace_logger.step(
+            "Gemini Multimodal OCR Call",
+            input_data={
+                "model": model_name,
+                "mime_type": mime_type,
+                "image_bytes_len": len(image_bytes),
+                "source": file_path or "bytes",
+            },
+        )
 
-    ocr_start = time.time()
-    response = client.models.generate_content(
-        model=model_name,
-        contents=[image_part, OCR_SYSTEM_PROMPT],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=PrescriptionOCRResult,
-            temperature=0.0,
-        ),
-    )
-    ocr_duration = time.time() - ocr_start
+        ocr_start = time.time()
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[image_part, "Extract the data from this image."],
+            config=types.GenerateContentConfig(
+                system_instruction=OCR_SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                response_schema=PrescriptionOCRResult,
+                temperature=0.0,
+            ),
+        )
+        ocr_duration = time.time() - ocr_start
 
-    ocr_usage = {
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "total_tokens": 0,
-    }
-    if hasattr(response, "usage_metadata") and response.usage_metadata:
-        ocr_usage["input_tokens"] = getattr(response.usage_metadata, "prompt_token_count", 0) or 0
-        ocr_usage["output_tokens"] = getattr(response.usage_metadata, "candidates_token_count", 0) or 0
-        ocr_usage["total_tokens"] = getattr(response.usage_metadata, "total_token_count", 0) or 0
+        ocr_usage = {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+        }
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            ocr_usage["input_tokens"] = getattr(response.usage_metadata, "prompt_token_count", 0) or 0
+            ocr_usage["output_tokens"] = getattr(response.usage_metadata, "candidates_token_count", 0) or 0
+            ocr_usage["total_tokens"] = getattr(response.usage_metadata, "total_token_count", 0) or 0
 
-    if hasattr(response, "parsed") and isinstance(response.parsed, PrescriptionOCRResult):
-        result = response.parsed
-    elif response.text:
-        result = PrescriptionOCRResult.model_validate_json(response.text)
-    else:
+        if hasattr(response, "parsed") and isinstance(response.parsed, PrescriptionOCRResult):
+            result = response.parsed
+        elif response.text:
+            result = PrescriptionOCRResult.model_validate_json(response.text)
+        else:
+            raise ValueError("Gemini returned an empty response for prescription OCR.")
+
+        logger.info(
+            "🔬 [OCR] Completed: is_prescription=%s | tests_count=%d | total_tokens=%d",
+            result.is_prescription, len(result.tests), ocr_usage["total_tokens"],
+        )
+
+        trace_logger.log_llm_call(
+            model=model_name,
+            duration=ocr_duration,
+            input_tokens=ocr_usage["input_tokens"],
+            output_tokens=ocr_usage["output_tokens"],
+            call_type="ocr_multimodal",
+        )
+        trace_logger.log_output({
+            "is_prescription": result.is_prescription,
+            "tests_found": len(result.tests),
+            "tests": [f"{t.name} ({t.confidence:.2f})" for t in result.tests],
+            "total_tokens": ocr_usage["total_tokens"],
+        })
+
+        return result, ocr_usage
+    finally:
         trace_logger.end_pipeline("OCR PIPELINE")
-        raise ValueError("Gemini returned an empty response for prescription OCR.")
-
-    logger.info(
-        "🔬 [OCR] Completed: is_prescription=%s | tests_count=%d | total_tokens=%d",
-        result.is_prescription, len(result.tests), ocr_usage["total_tokens"],
-    )
-
-    trace_logger.log_llm_call(
-        model=model_name,
-        duration=ocr_duration,
-        input_tokens=ocr_usage["input_tokens"],
-        output_tokens=ocr_usage["output_tokens"],
-        call_type="ocr_multimodal",
-    )
-    trace_logger.log_output({
-        "is_prescription": result.is_prescription,
-        "tests_found": len(result.tests),
-        "tests": [f"{t.name} ({t.confidence:.2f})" for t in result.tests],
-        "total_tokens": ocr_usage["total_tokens"],
-    })
-    trace_logger.end_pipeline("OCR PIPELINE")
-
-    return result, ocr_usage
-
-
-
-

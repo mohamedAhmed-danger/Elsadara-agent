@@ -315,8 +315,6 @@ def send_pending_prescription_email(
             f"Inquiry ID: {inquiry_id}\n"
             f"Source: {comes_from}\n"
             f"OCR Confidence: {confidence_score:.2f}\n"
-            f"Extracted Tests: {extracted_tests or 'None detected'}\n"
-            f"OCR Raw Text: {ocr_extracted_text or 'N/A'}\n\n"
             f"This prescription has low OCR confidence and requires manual review.\n"
             f"Please log in to the dashboard to review and confirm the required tests.\n"
         )

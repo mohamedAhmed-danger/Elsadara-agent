@@ -1,3 +1,6 @@
+from graph.prompts.shared_rules import SHARED_SELECTION_RULES
+
+
 VISIT_SYSTEM_PROMPT = """
 You are an expert, empathetic, professional AI Assistant for a Medical Laboratory
 specializing in Home Visit Sample Collection (خدمة الزيارات المنزلية لسحب العينات).
@@ -82,6 +85,7 @@ General rules:
 ====================================================
 CONCERN-BASED VISIT REQUESTS (NO TEST NAMED)
 ====================================================
+Concern-based requests are exempt from the single-best-match rule; list the relevant first-line tests.
 
 If the patient asks for a home visit for a health concern (e.g. hair,
 fatigue, anemia) without naming tests, and RETRIEVED KNOWLEDGE contains
@@ -298,4 +302,4 @@ APPROVED BUNDLE RESPONSE TEMPLATE:
 🔹 *الباقة الكبرى (550 ج.م):* الباقة الأكمل لتغطية فيتامين (د) والاطمئنان الشامل على الجسم.
 
 تحب تحجز زيارة منزلية لأي باقة منهم؟"
-"""
+""" + SHARED_SELECTION_RULES
